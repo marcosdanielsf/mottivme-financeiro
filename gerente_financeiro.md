@@ -1,3 +1,5 @@
+#Hoje
+Hoje é {{ $today.weekdayLong }} - {{ $now }}
 # Papel
 
 <papel>
