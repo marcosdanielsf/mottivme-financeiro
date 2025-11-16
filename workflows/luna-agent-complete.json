@@ -1,0 +1,717 @@
+{
+  "name": "🌙 Luna - Assistente Financeira Completa",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Luna - Assistente Financeira IA\n\n**Recursos:**\n- LangChain Agent (ReAct)\n- Claude 3.5 Sonnet\n- 15+ Ferramentas PostgreSQL\n- Memória Conversacional\n- WhatsApp + Telegram\n\n**Fluxo:**\n1. Mensagem chega\n2. Agent processa com ferramentas\n3. Responde com contexto\n4. Salva na memória",
+        "height": 450,
+        "width": 650,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        240
+      ],
+      "id": "intro-note",
+      "name": "📝 Sobre Luna"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        920,
+        460
+      ],
+      "id": "chat-trigger",
+      "name": "💬 Chat Trigger",
+      "webhookId": "luna-chat-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user-message",
+              "name": "mensagem",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "session-id",
+              "name": "session_id",
+              "value": "={{ $json.sessionId || 'default' }}",
+              "type": "string"
+            },
+            {
+              "id": "user-id",
+              "name": "user_id",
+              "value": "={{ $json.userId || 'user_default' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        460
+      ],
+      "id": "extract-context",
+      "name": "📋 Extrair Contexto"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('prompts/luna-agent-core.md').content }}",
+        "options": {
+          "systemMessage": "=Data atual: {{ $now.toFormat('dd/MM/yyyy - EEEE') }}\nHora: {{ $now.toFormat('HH:mm') }}\nUsuário: {{ $json.user_id }}\n\nVocê tem acesso a 15 ferramentas especializadas. Use-as sempre que precisar consultar dados.\n\nIMPORTANTE: Seja precisa, use as ferramentas, e mantenha sua personalidade amigável mas profissional."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1520,
+        460
+      ],
+      "id": "luna-agent",
+      "name": "🌙 Luna Agent"
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-sonnet-20241022",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        680
+      ],
+      "id": "claude-llm",
+      "name": "🤖 Claude 3.5 Sonnet",
+      "credentials": {
+        "anthropicApi": {
+          "id": "{{ANTHROPIC_CREDENTIAL_ID}}",
+          "name": "Anthropic Claude"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.session_id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1320,
+        800
+      ],
+      "id": "postgres-memory",
+      "name": "🧠 Memória PostgreSQL",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Use para raciocinar sobre problemas complexos antes de dar a resposta final. Não retorna dados novos, apenas estrutura seu pensamento."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        680
+      ],
+      "id": "tool-think",
+      "name": "💭 Pensar"
+    },
+    {
+      "parameters": {
+        "name": "consultar_documentos",
+        "description": "Busca documentos financeiros (contas a pagar/receber) com filtros opcionais. Use para responder sobre valores, vencimentos, fornecedores.",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "luna_financeiro",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "documentos",
+          "mode": "list"
+        },
+        "limit": 100,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        680
+      ],
+      "id": "tool-consultar-docs",
+      "name": "📄 Consultar Documentos",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "vencimentos_proximos",
+        "description": "Lista documentos vencendo nos próximos 7 dias. Use para alertas de vencimento.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  d.id,\n  d.tipo,\n  d.numero_documento,\n  d.data_vencimento,\n  d.valor_liquido,\n  e.nome as fornecedor_cliente,\n  d.status,\n  (d.data_vencimento - CURRENT_DATE) as dias_restantes\nFROM luna_financeiro.documentos d\nLEFT JOIN luna_financeiro.entidades e ON d.entidade_id = e.id\nWHERE d.status IN ('pendente', 'aprovado')\n  AND d.data_vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'\nORDER BY d.data_vencimento ASC\nLIMIT 50",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        800
+      ],
+      "id": "tool-vencimentos",
+      "name": "⏰ Vencimentos Próximos",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "calcular_fluxo_caixa",
+        "description": "Calcula fluxo de caixa (entradas, saídas, saldo) para um período. Use para análises financeiras.",
+        "operation": "executeQuery",
+        "query": "=WITH periodo AS (\n  SELECT \n    COALESCE({{ $parameter.data_inicio }}::date, CURRENT_DATE) as inicio,\n    COALESCE({{ $parameter.data_fim }}::date, CURRENT_DATE + INTERVAL '30 days') as fim\n)\nSELECT\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE 0 END) as total_entradas,\n  SUM(CASE WHEN tipo = 'contas_pagar' THEN valor_liquido ELSE 0 END) as total_saidas,\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE -valor_liquido END) as saldo_liquido,\n  COUNT(*) as quantidade_documentos,\n  MIN(data_vencimento) as primeira_data,\n  MAX(data_vencimento) as ultima_data\nFROM luna_financeiro.documentos, periodo\nWHERE data_vencimento BETWEEN periodo.inicio AND periodo.fim\n  AND status IN ('pendente', 'aprovado')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        920
+      ],
+      "id": "tool-fluxo-caixa",
+      "name": "💰 Calcular Fluxo de Caixa",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "analise_categoria",
+        "description": "Agrupa gastos ou receitas por categoria. Use para entender onde o dinheiro está indo.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  c.nome as categoria,\n  c.cor,\n  COUNT(d.id) as quantidade,\n  SUM(d.valor_liquido) as total,\n  AVG(d.valor_liquido) as ticket_medio,\n  ROUND((SUM(d.valor_liquido) / NULLIF(\n    (SELECT SUM(valor_liquido) \n     FROM luna_financeiro.documentos \n     WHERE tipo = d.tipo \n       AND data_emissao >= CURRENT_DATE - INTERVAL '30 days'), \n    0)) * 100, 2) as percentual_do_total\nFROM luna_financeiro.documentos d\nJOIN luna_financeiro.categorias c ON d.categoria_id = c.id\nWHERE d.data_emissao >= CURRENT_DATE - INTERVAL '30 days'\n  AND d.tipo = COALESCE({{ $parameter.tipo }}, d.tipo)\nGROUP BY c.id, c.nome, c.cor, d.tipo\nORDER BY total DESC\nLIMIT 20",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1040
+      ],
+      "id": "tool-analise-categoria",
+      "name": "📊 Análise por Categoria",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "top_fornecedores",
+        "description": "Lista os maiores fornecedores por valor transacionado. Use para análise de concentração de gastos.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  e.nome,\n  e.cnpj_cpf,\n  COUNT(d.id) as quantidade_documentos,\n  SUM(d.valor_liquido) as total_transacionado,\n  AVG(d.valor_liquido) as ticket_medio,\n  MAX(d.data_emissao) as ultima_transacao,\n  e.score\nFROM luna_financeiro.entidades e\nJOIN luna_financeiro.documentos d ON d.entidade_id = e.id\nWHERE e.tipo = 'fornecedor'\n  AND d.data_emissao >= CURRENT_DATE - INTERVAL '3 months'\nGROUP BY e.id, e.nome, e.cnpj_cpf, e.score\nORDER BY total_transacionado DESC\nLIMIT 10",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1160
+      ],
+      "id": "tool-top-fornecedores",
+      "name": "🏢 Top Fornecedores",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "top_clientes",
+        "description": "Lista os maiores clientes por valor transacionado. Use para análise de receitas.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  e.nome,\n  e.cnpj_cpf,\n  COUNT(d.id) as quantidade_documentos,\n  SUM(d.valor_liquido) as total_transacionado,\n  AVG(d.valor_liquido) as ticket_medio,\n  MAX(d.data_emissao) as ultima_transacao,\n  e.score,\n  SUM(CASE WHEN d.status = 'vencido' THEN 1 ELSE 0 END) as documentos_vencidos\nFROM luna_financeiro.entidades e\nJOIN luna_financeiro.documentos d ON d.entidade_id = e.id\nWHERE e.tipo = 'cliente'\n  AND d.data_emissao >= CURRENT_DATE - INTERVAL '3 months'\nGROUP BY e.id, e.nome, e.cnpj_cpf, e.score\nORDER BY total_transacionado DESC\nLIMIT 10",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1280
+      ],
+      "id": "tool-top-clientes",
+      "name": "👥 Top Clientes",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "calcular_indicadores",
+        "description": "Calcula KPIs financeiros principais do mês atual. Use para responder sobre saúde financeira geral.",
+        "operation": "executeQuery",
+        "query": "=WITH mes_atual AS (\n  SELECT DATE_TRUNC('month', CURRENT_DATE) as inicio_mes\n)\nSELECT\n  -- Totais\n  SUM(CASE WHEN tipo = 'contas_pagar' AND status != 'cancelado' THEN valor_liquido ELSE 0 END) as total_pagar,\n  SUM(CASE WHEN tipo = 'contas_receber' AND status != 'cancelado' THEN valor_liquido ELSE 0 END) as total_receber,\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE -valor_liquido END) as saldo_mensal,\n  \n  -- Pendentes\n  SUM(CASE WHEN tipo = 'contas_pagar' AND status = 'pendente' THEN valor_liquido ELSE 0 END) as pendente_pagar,\n  SUM(CASE WHEN tipo = 'contas_receber' AND status = 'pendente' THEN valor_liquido ELSE 0 END) as pendente_receber,\n  \n  -- Vencidos\n  COUNT(CASE WHEN status = 'vencido' THEN 1 END) as quantidade_vencidos,\n  SUM(CASE WHEN status = 'vencido' THEN valor_liquido ELSE 0 END) as total_vencido,\n  \n  -- Médias\n  AVG(CASE WHEN tipo = 'contas_pagar' THEN valor_liquido END) as ticket_medio_pagamento,\n  AVG(CASE WHEN tipo = 'contas_receber' THEN valor_liquido END) as ticket_medio_recebimento,\n  \n  -- Taxa inadimplência\n  ROUND(\n    (COUNT(CASE WHEN status = 'vencido' THEN 1 END)::numeric / \n     NULLIF(COUNT(CASE WHEN tipo = 'contas_receber' THEN 1 END), 0)) * 100, \n    2\n  ) as taxa_inadimplencia_percentual\n  \nFROM luna_financeiro.documentos, mes_atual\nWHERE data_emissao >= mes_atual.inicio_mes\n  AND data_emissao < mes_atual.inicio_mes + INTERVAL '1 month'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1400
+      ],
+      "id": "tool-indicadores",
+      "name": "📈 Calcular Indicadores",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "comparar_mes_anterior",
+        "description": "Compara o mês atual com o anterior. Use para análise de tendências.",
+        "operation": "executeQuery",
+        "query": "=WITH mes_atual AS (\n  SELECT \n    DATE_TRUNC('month', CURRENT_DATE) as inicio,\n    DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' as fim\n),\nmes_anterior AS (\n  SELECT \n    DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month' as inicio,\n    DATE_TRUNC('month', CURRENT_DATE) as fim\n)\nSELECT\n  'Mês Atual' as periodo,\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE 0 END) as receitas,\n  SUM(CASE WHEN tipo = 'contas_pagar' THEN valor_liquido ELSE 0 END) as despesas,\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE -valor_liquido END) as saldo\nFROM luna_financeiro.documentos, mes_atual\nWHERE data_emissao >= mes_atual.inicio AND data_emissao < mes_atual.fim\n\nUNION ALL\n\nSELECT\n  'Mês Anterior' as periodo,\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE 0 END) as receitas,\n  SUM(CASE WHEN tipo = 'contas_pagar' THEN valor_liquido ELSE 0 END) as despesas,\n  SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE -valor_liquido END) as saldo\nFROM luna_financeiro.documentos, mes_anterior\nWHERE data_emissao >= mes_anterior.inicio AND data_emissao < mes_anterior.fim",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1520
+      ],
+      "id": "tool-comparar-mes",
+      "name": "📊 Comparar com Mês Anterior",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "detectar_duplicatas",
+        "description": "Identifica possíveis documentos duplicados. Use quando suspeitar de lançamentos em duplicidade.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  numero_documento,\n  valor_liquido,\n  data_vencimento,\n  COUNT(*) as quantidade_duplicatas,\n  STRING_AGG(id::text, ', ') as ids_documentos\nFROM luna_financeiro.documentos\nWHERE numero_documento IS NOT NULL\n  AND status != 'cancelado'\nGROUP BY numero_documento, valor_liquido, data_vencimento\nHAVING COUNT(*) > 1\nORDER BY quantidade_duplicatas DESC\nLIMIT 20",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        920,
+        1640
+      ],
+      "id": "tool-duplicatas",
+      "name": "🔍 Detectar Duplicatas",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "buscar_documento_especifico",
+        "description": "Busca um documento específico por número, fornecedor ou outros critérios. Use quando o usuário pedir detalhes de um documento específico.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  d.*,\n  e.nome as fornecedor_cliente,\n  c.nome as categoria,\n  cc.nome as centro_custo\nFROM luna_financeiro.documentos d\nLEFT JOIN luna_financeiro.entidades e ON d.entidade_id = e.id\nLEFT JOIN luna_financeiro.categorias c ON d.categoria_id = c.id\nLEFT JOIN luna_financeiro.centros_custo cc ON d.centro_custo_id = cc.id\nWHERE \n  (d.numero_documento ILIKE '%' || {{ $parameter.termo_busca }} || '%' OR\n   e.nome ILIKE '%' || {{ $parameter.termo_busca }} || '%' OR\n   d.descricao ILIKE '%' || {{ $parameter.termo_busca }} || '%')\nLIMIT 10",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        1520
+      ],
+      "id": "tool-buscar-doc",
+      "name": "🔎 Buscar Documento",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "historico_entidade",
+        "description": "Retorna histórico completo de um fornecedor ou cliente. Use para análise de relacionamento.",
+        "operation": "executeQuery",
+        "query": "=SELECT \n  e.*,\n  COUNT(d.id) as total_documentos,\n  SUM(d.valor_liquido) as total_transacionado,\n  AVG(d.valor_liquido) as ticket_medio,\n  MIN(d.data_emissao) as primeira_transacao,\n  MAX(d.data_emissao) as ultima_transacao,\n  SUM(CASE WHEN d.status = 'vencido' THEN 1 ELSE 0 END) as documentos_vencidos\nFROM luna_financeiro.entidades e\nLEFT JOIN luna_financeiro.documentos d ON d.entidade_id = e.id\nWHERE e.nome ILIKE '%' || {{ $parameter.nome_entidade }} || '%'\nGROUP BY e.id\nLIMIT 5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        1640
+      ],
+      "id": "tool-historico-entidade",
+      "name": "📜 Histórico Entidade",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "agendar_alerta",
+        "description": "Cria um alerta para ser enviado em data/hora específica. Use quando usuário pedir para ser lembrado de algo.",
+        "operation": "executeQuery",
+        "query": "=INSERT INTO luna_financeiro.alertas (\n  tipo,\n  severidade,\n  titulo,\n  mensagem,\n  destinatario_email,\n  agendar_para\n) VALUES (\n  {{ $parameter.tipo || 'custom' }},\n  {{ $parameter.severidade || 'info' }},\n  {{ $parameter.titulo }},\n  {{ $parameter.mensagem }},\n  {{ $parameter.email }},\n  {{ $parameter.data_hora }}::timestamp\n)\nRETURNING id, titulo, agendar_para",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1320,
+        1520
+      ],
+      "id": "tool-agendar-alerta",
+      "name": "🔔 Agendar Alerta",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "projetar_saldo_futuro",
+        "description": "Projeta o saldo nos próximos 30 dias baseado em documentos já agendados. Use para análise de fluxo de caixa futuro.",
+        "operation": "executeQuery",
+        "query": "=WITH documentos_futuros AS (\n  SELECT \n    data_vencimento,\n    SUM(CASE WHEN tipo = 'contas_receber' THEN valor_liquido ELSE -valor_liquido END) as movimento_dia\n  FROM luna_financeiro.documentos\n  WHERE data_vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'\n    AND status IN ('pendente', 'aprovado')\n  GROUP BY data_vencimento\n)\nSELECT \n  data_vencimento,\n  movimento_dia,\n  SUM(movimento_dia) OVER (ORDER BY data_vencimento) as saldo_acumulado\nFROM documentos_futuros\nORDER BY data_vencimento",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1320,
+        1640
+      ],
+      "id": "tool-projetar-saldo",
+      "name": "🔮 Projetar Saldo Futuro",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "listar_alertas_pendentes",
+        "description": "Lista alertas que ainda não foram lidos ou enviados. Use para verificar notificações pendentes.",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "luna_financeiro",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alertas",
+          "mode": "list"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "lido",
+              "value": "false"
+            }
+          ]
+        },
+        "limit": 50,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1520,
+        1520
+      ],
+      "id": "tool-alertas-pendentes",
+      "name": "📬 Alertas Pendentes",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO luna_financeiro.transacoes (\n  tipo_operacao,\n  tabela,\n  dados_novos,\n  usuario,\n  observacao\n) VALUES (\n  'INTERACAO_LUNA',\n  'chat_logs',\n  jsonb_build_object(\n    'user_id', '{{ $json.user_id }}',\n    'session_id', '{{ $json.session_id }}',\n    'mensagem', '{{ $json.mensagem }}',\n    'resposta_luna', '{{ $('🌙 Luna Agent').item.json.output }}',\n    'tools_usadas', '{{ $('🌙 Luna Agent').item.json.toolsUsed }}',\n    'timestamp', '{{ $now }}'\n  ),\n  'luna_agent',\n  'Interação com Luna Agent'\n)\nRETURNING id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1720,
+        460
+      ],
+      "id": "log-interaction",
+      "name": "📝 Log Interação",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('🌙 Luna Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        460
+      ],
+      "id": "respond-to-chat",
+      "name": "💬 Responder ao Chat"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Análise de sentimento da resposta\nconst resposta = $('🌙 Luna Agent').item.json.output;\n\nlet sentimento = 'neutro';\nlet urgencia = 'normal';\n\n// Detectar urgência\nif (resposta.includes('🚨') || resposta.includes('URGENTE') || resposta.includes('CRÍTICO')) {\n  urgencia = 'alta';\n} else if (resposta.includes('⚠️') || resposta.includes('ATENÇÃO')) {\n  urgencia = 'media';\n}\n\n// Detectar sentimento\nif (resposta.includes('✅') || resposta.includes('positiv') || resposta.includes('bom')) {\n  sentimento = 'positivo';\n} else if (resposta.includes('❌') || resposta.includes('problema') || resposta.includes('risco')) {\n  sentimento = 'negativo';\n}\n\nreturn {\n  json: {\n    sentimento,\n    urgencia,\n    tamanho_resposta: resposta.length,\n    tem_numeros: /R\\$\\s*[\\d.,]+/.test(resposta),\n    tem_alertas: resposta.includes('🚨') || resposta.includes('⚠️')\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        680
+      ],
+      "id": "analyze-response",
+      "name": "📊 Analisar Resposta"
+    }
+  ],
+  "connections": {
+    "💬 Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "📋 Extrair Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Extrair Contexto": {
+      "main": [
+        [
+          {
+            "node": "🌙 Luna Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌙 Luna Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 Claude 3.5 Sonnet",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "🧠 Memória PostgreSQL",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "💭 Pensar",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "📄 Consultar Documentos",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "⏰ Vencimentos Próximos",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "💰 Calcular Fluxo de Caixa",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "📊 Análise por Categoria",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "🏢 Top Fornecedores",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "👥 Top Clientes",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "📈 Calcular Indicadores",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "📊 Comparar com Mês Anterior",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "🔍 Detectar Duplicatas",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "🔎 Buscar Documento",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "📜 Histórico Entidade",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "🔔 Agendar Alerta",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "🔮 Projetar Saldo Futuro",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "📬 Alertas Pendentes",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "📝 Log Interação",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Analisar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Log Interação": {
+      "main": [
+        [
+          {
+            "node": "💬 Responder ao Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-11-16T12:00:00.000Z",
+      "updatedAt": "2025-11-16T12:00:00.000Z",
+      "id": "luna-agent",
+      "name": "luna-agent"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-16T12:00:00.000Z",
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "luna-production"
+  }
+}
