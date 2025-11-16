@@ -1,0 +1,912 @@
+{
+  "name": "Assistente-adm",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mensagem",
+              "name": "mensagem",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "name": "telefone",
+              "value": "=+551199998888",
+              "type": "string"
+            },
+            {
+              "id": "usuario",
+              "name": "usuario",
+              "value": "=Marcos",
+              "type": "string"
+            },
+            {
+              "id": "967dc772-d878-4993-a62e-079e26284f6c",
+              "name": "api_key",
+              "value": "pit-fe627027-b9cb-4ea3-aaa4-149459e66a03",
+              "type": "string"
+            },
+            {
+              "id": "493a7a44-c33b-422b-8aef-c29e3e7f85b5",
+              "name": "id_contato",
+              "value": "vjLP5amnYJNxzjQTVAu7",
+              "type": "string"
+            },
+            {
+              "id": "b5cdaa3f-d880-42bf-b89b-1d340b33c68a",
+              "name": "e-mail",
+              "value": "fernanda_lappe@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1376,
+        -64
+      ],
+      "id": "4fb89766-ae44-4393-98bc-55dbe35499f0",
+      "name": "Extrair Dados da Mensagem"
+    },
+    {
+      "parameters": {
+        "description": "Use essa ferramenta para refletir sobre algo complexo. Ela não obtém novas informações, apenas adiciona seu raciocínio ao registro. Use quando precisar pensar sobre a melhor forma de apresentar dados ou tomar decisões."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        -816,
+        144
+      ],
+      "id": "415162c8-8473-49b0-b425-464c456f7ddb",
+      "name": "Refletir"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1072,
+        144
+      ],
+      "id": "e593adaf-77f4-4168-aee5-b25dbbfde3b5",
+      "name": "OpenAI GPT-",
+      "credentials": {
+        "openAiApi": {
+          "id": "WEENPovt22LUaeRp",
+          "name": "OpenAi - Marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1728,
+        -48
+      ],
+      "id": "78fb3be6-e507-4569-8c6d-4eec769b0529",
+      "name": "When chat message received",
+      "webhookId": "df56874c-02c9-47dd-b453-7fcc5e254cb1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -944,
+        144
+      ],
+      "id": "62032f50-8811-4f9e-b5da-8e20e265625f",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM marcar_pagamentos_atrasados();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1216,
+        144
+      ],
+      "id": "b3286c5f-45e3-4cae-b75c-2e8cd84b32ca",
+      "name": "Marcar Pagamentos Atrasados (Job Diário)",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "clientes_mottivme"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "nome_cliente",
+              "condition": "like",
+              "value": "={{ '%' + $fromAI('busca', 'Nome, empresa, telefone ou parte de qualquer um deles', 'string') + '%' }}"
+            }
+          ]
+        },
+        "combineConditions": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        144
+      ],
+      "id": "77ca4183-1eb5-4425-9843-9f43e64faa69",
+      "name": "Buscar Cliente Específico",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT \n  cm.*,\n  EXTRACT(DAY FROM (CURRENT_DATE - cm.data_vencimento))::INTEGER as dias_atraso,\n  ROUND(\n    cm.valor_mensal + (cm.valor_mensal * 0.02 * EXTRACT(DAY FROM (CURRENT_DATE - cm.data_vencimento))), \n    2\n  ) as valor_devido,\n  CASE \n    WHEN cm.historico_atrasos = 0 THEN 'Excelente - Nunca atrasou'\n    WHEN cm.historico_atrasos <= 2 THEN 'Bom - Poucos atrasos'\n    WHEN cm.historico_atrasos <= 5 THEN 'Regular - Atrasos ocasionais'\n    ELSE 'Ruim - Atrasos frequentes'\n  END as avaliacao_historico\nFROM clientes_mottivme cm\nWHERE \n  cm.nome_cliente ILIKE '%{{ $fromAI('busca', 'Nome, empresa ou telefone do cliente', 'string') }}%'\n  OR cm.empresa ILIKE '%{{ $fromAI('busca', '', 'string') }}%'\n  OR cm.telefone ILIKE '%{{ $fromAI('busca', '', 'string') }}%'\nLIMIT 5;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1040,
+        144
+      ],
+      "id": "9a03707b-716d-46f3-be3b-26c39c8a6213",
+      "name": "Buscar Cliente Completo (Query)",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "clientes_mottivme"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "status_cliente",
+              "value": "ativo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -688,
+        144
+      ],
+      "id": "a575eef4-214f-403b-a56b-c8e4fb1c6577",
+      "name": "Listar Todos Clientes Ativos",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "log_cobrancas"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "cliente_id",
+              "value": "={{ $fromAI('cliente_id', 'UUID do cliente para ver histórico', 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -48,
+        144
+      ],
+      "id": "19ca2f23-f35c-4aab-b416-eed783cb2301",
+      "name": "Histórico Cobranças Cliente",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- CLIENTES EM RISCO DE SUSPENSÃO\nSELECT \n  id,\n  nome_cliente,\n  empresa,\n  telefone,\n  pacote_servico,\n  EXTRACT(DAY FROM (CURRENT_DATE - data_vencimento))::INTEGER as dias_atraso,\n  ROUND(\n    valor_mensal + (valor_mensal * 0.02 * EXTRACT(DAY FROM (CURRENT_DATE - data_vencimento))),\n    2\n  ) as valor_devido,\n  numero_cobrancas,\n  5 - numero_cobrancas as cobrancas_restantes,\n  CASE \n    WHEN numero_cobrancas >= 4 THEN '🚨 CRÍTICO - Próxima suspende'\n    WHEN numero_cobrancas >= 3 THEN '⚠️ ALTO - Atenção urgente'\n    ELSE '📊 MÉDIO - Monitorar'\n  END as nivel_risco\nFROM clientes_mottivme\nWHERE cobranca_ativa = true\n  AND status_pagamento = 'atrasado'\n  AND numero_cobrancas >= {{ $fromAI('nivel_minimo', 'Número mínimo de cobranças. Padrão: 3', 'number') || 3 }}\nORDER BY numero_cobrancas DESC, dias_atraso DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        144
+      ],
+      "id": "e869ddbd-86b0-49c7-b989-303c7f810c07",
+      "name": "Clientes Em Risco Suspensão",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH base AS (\n  SELECT\n    COALESCE(valor_mensal, 0) AS valor_mensal,\n    LOWER(TRIM(COALESCE(status_pagamento, ''))) AS status_pagamento,\n    LOWER(TRIM(COALESCE(status_cliente, ''))) AS status_cliente,\n    data_vencimento,\n    CASE WHEN data_vencimento IS NOT NULL THEN (CURRENT_DATE - data_vencimento) ELSE NULL END AS dias_atraso\n  FROM clientes_mottivme\n)\nSELECT\n  COUNT(*) FILTER (WHERE status_pagamento = 'atrasado') AS clientes_atrasados,\n  COUNT(*) FILTER (WHERE status_cliente = 'ativo') AS clientes_ativos,\n  COUNT(*) FILTER (WHERE status_cliente = 'suspenso') AS clientes_suspensos,\n\n  SUM(valor_mensal) FILTER (WHERE status_cliente = 'ativo') AS mrr_total,\n  SUM(valor_mensal) FILTER (WHERE status_pagamento = 'atrasado') AS mrr_em_risco,\n\n  SUM(\n    ROUND(\n      valor_mensal\n      + valor_mensal * 0.02 * GREATEST(dias_atraso, 0),\n      2\n    )\n  ) FILTER (WHERE status_pagamento = 'atrasado' AND dias_atraso IS NOT NULL) AS valor_total_devido,\n\n  ROUND( AVG(dias_atraso) FILTER (WHERE status_pagamento = 'atrasado' AND dias_atraso IS NOT NULL) ) AS media_dias_atraso,\n\n  ROUND(\n    100.0 * COUNT(*) FILTER (WHERE status_pagamento != 'atrasado' AND status_cliente = 'ativo') /\n    NULLIF(COUNT(*) FILTER (WHERE status_cliente = 'ativo'), 0),\n    2\n  ) AS taxa_adimplencia\nFROM base;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -304,
+        144
+      ],
+      "id": "05595eed-9b7f-476c-8ab7-32639c4eed87",
+      "name": "Análise Financeira Completa",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- EFETIVIDADE DAS COBRANÇAS POR NÍVEL\nWITH cobrancas_stats AS (\n  SELECT \n    lc.tipo_cobranca,\n    COUNT(*) as total_enviadas,\n    COUNT(DISTINCT lc.cliente_id) as clientes_unicos,\n    COUNT(*) FILTER (\n      WHERE cm.status_pagamento = 'pago' \n      AND cm.data_ultimo_pagamento >= DATE(lc.data_envio)\n      AND cm.data_ultimo_pagamento <= DATE(lc.data_envio) + INTERVAL '7 days'\n    ) as total_recuperadas\n  FROM log_cobrancas lc\n  JOIN clientes_mottivme cm ON lc.cliente_id = cm.id\n  WHERE lc.data_envio >= CURRENT_DATE - INTERVAL '{{ $fromAI('periodo_dias', 'Período em dias. Padrão: 30', 'number') || 30 }} days'\n    AND lc.tipo_cobranca IN ('amigavel', 'assertivo', 'urgente', 'critico')\n  GROUP BY lc.tipo_cobranca\n)\nSELECT \n  tipo_cobranca,\n  total_enviadas,\n  clientes_unicos,\n  total_recuperadas,\n  ROUND(\n    100.0 * total_recuperadas / NULLIF(total_enviadas, 0),\n    2\n  ) as taxa_conversao_pct\nFROM cobrancas_stats\nORDER BY \n  CASE tipo_cobranca\n    WHEN 'amigavel' THEN 1\n    WHEN 'assertivo' THEN 2\n    WHEN 'urgente' THEN 3\n    WHEN 'critico' THEN 4\n  END;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        464,
+        144
+      ],
+      "id": "a663455f-982f-4323-ba17-bf4c57c40c4e",
+      "name": "Efetividade das Cobranças",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH dados_mes AS (\n  SELECT\n    (DATE_TRUNC('month', CURRENT_DATE))::date AS mes_atual,\n    (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::date AS mes_anterior\n),\nstats_atual AS (\n  SELECT\n    COUNT(*) FILTER (WHERE LOWER(TRIM(status_cliente)) = 'ativo') AS ativos,\n    COUNT(*) FILTER (\n      WHERE LOWER(TRIM(status_pagamento)) = 'pago'\n        AND data_ultimo_pagamento IS NOT NULL\n        AND data_ultimo_pagamento >= (SELECT mes_atual FROM dados_mes)\n    ) AS pagos_mes,\n    COUNT(*) FILTER (WHERE LOWER(TRIM(status_pagamento)) = 'atrasado') AS atrasados,\n    SUM(valor_mensal) FILTER (\n      WHERE LOWER(TRIM(status_pagamento)) = 'pago'\n        AND data_ultimo_pagamento IS NOT NULL\n        AND data_ultimo_pagamento >= (SELECT mes_atual FROM dados_mes)\n    ) AS receita_confirmada,\n    SUM(valor_mensal) FILTER (WHERE LOWER(TRIM(status_pagamento)) = 'pendente') AS receita_pendente,\n    SUM(\n      ROUND(\n        COALESCE(valor_mensal,0)\n        + COALESCE(valor_mensal,0) * 0.02 * GREATEST((CURRENT_DATE - data_vencimento), 0),\n        2\n      )\n    ) FILTER (\n      WHERE LOWER(TRIM(status_pagamento)) = 'atrasado'\n        AND data_vencimento IS NOT NULL\n    ) AS valor_atrasado\n  FROM clientes_mottivme\n),\nstats_anterior AS (\n  SELECT\n    COUNT(*) FILTER (\n      WHERE LOWER(TRIM(status_pagamento)) = 'pago'\n        AND data_ultimo_pagamento IS NOT NULL\n        AND data_ultimo_pagamento >= (SELECT mes_anterior FROM dados_mes)\n        AND data_ultimo_pagamento < (SELECT mes_atual FROM dados_mes)\n    ) AS pagos_mes\n  FROM clientes_mottivme\n)\nSELECT\n  sa.*,\n  sn.pagos_mes AS pagos_mes_anterior,\n  ROUND(\n    100.0 * (sa.pagos_mes - sn.pagos_mes) / NULLIF(sn.pagos_mes, 0),\n    2\n  ) AS variacao_pct\nFROM stats_atual sa\nCROSS JOIN stats_anterior sn;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -432,
+        144
+      ],
+      "id": "782a32bf-74cf-4c9f-b2fa-4f039b6ae9d5",
+      "name": "Relatório Mensal Consolidado",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- TOP CLIENTES POR CRITÉRIO\nSELECT \n  nome_cliente,\n  empresa,\n  pacote_servico,\n  valor_mensal,\n  meses_cliente,\n  valor_mensal * meses_cliente as valor_total_pago,\n  historico_atrasos,\n  CASE \n    WHEN historico_atrasos = 0 THEN 'Excelente'\n    WHEN historico_atrasos <= 2 THEN 'Bom'\n    WHEN historico_atrasos <= 5 THEN 'Regular'\n    ELSE 'Ruim'\n  END as avaliacao\nFROM clientes_mottivme\nWHERE status_cliente = 'ativo'\nORDER BY \n  CASE '{{ $fromAI('ordenar_por', 'valor, tempo, historico, nome', 'string') }}'\n    WHEN 'valor' THEN valor_mensal\n    WHEN 'tempo' THEN meses_cliente::numeric\n    WHEN 'historico' THEN -historico_atrasos::numeric\n    ELSE 0\n  END DESC\nLIMIT {{ $fromAI('limite', 'Quantidade a retornar. Padrão: 10', 'number') || 10 }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        144
+      ],
+      "id": "b0684fc9-d9e0-4d37-a06d-80554bd7540f",
+      "name": "Ranking Top Clientes",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=-- QUERY CUSTOMIZADA LIVRE\n{{ $fromAI('query_sql', 'Query SQL completa a executar. Use com cuidado!', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        336,
+        144
+      ],
+      "id": "1c726aa4-62dc-496f-a80e-a2f291ac6245",
+      "name": "Query SQL Livre (Avançado)",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM buscar_pagamentos_atrasados({{ $fromAI('limite_busca', 'Quantidade máxima de resultados. Padrão: 50 para listar todos', 'number') || 50 }});",
+        "options": {
+          "queryReplacement": "={{ $fromAI('query_custom', 'Query SQL customizada se necessário. Deixe vazio para usar padrão.', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -560,
+        144
+      ],
+      "id": "9c44dfbd-f3f5-46ce-8120-3bfa09e035c6",
+      "name": "Buscar Clientes Atrasados1",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM v_dashboard_cobrancas;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        144
+      ],
+      "id": "2783d2dd-7ce7-4865-a331-f62b0171b9f5",
+      "name": "Dashboard Financeiro1",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM registrar_pagamento(\n  p_cliente_id := '{{ $fromAI('cliente_id', 'UUID do cliente que pagou', 'string') }}'::uuid,\n  p_valor_pago := {{ $fromAI('valor_pago', 'Valor recebido em decimal. Ex: 600.00', 'number') }},\n  p_forma_pagamento := '{{ $fromAI('forma_pagamento', 'pix, transferencia, boleto, cartao, etc', 'string') }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        592,
+        144
+      ],
+      "id": "f1ce8742-b6c5-4980-8bdc-c5cb0e7dc393",
+      "name": "Registrar Pagamento Manual1",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM suspender_cliente(\n  p_cliente_id := '{{ $fromAI('cliente_id', 'UUID do cliente a suspender', 'string') }}'::uuid,\n  p_motivo := '{{ $fromAI('motivo', 'Motivo detalhado da suspensão. Ex: Inadimplência persistente após múltiplas tentativas', 'string') }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        848,
+        144
+      ],
+      "id": "0ed58f6e-824a-400a-abf8-2ff66ed1e605",
+      "name": "Suspender Cliente Manual1",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Extrair Dados da Mensagem').item.json.mensagem }}",
+        "options": {
+          "systemMessage": "=# ASSISTENTE INTERNO MOTTIVME\n\n## PAPEL\n\n<papel>\nVocê é o assistente interno da **Mottivme - BPO Commercial Human+AI**, uma empresa que oferece serviços de automação comercial e pré-vendas para empresários brasileiros, principalmente nos EUA.\n\nSua função é auxiliar o Marcos (fundador) na gestão operacional da empresa, focando especialmente em:\n- Gestão de cobranças e pagamentos\n- Análise financeira e relatórios\n- Gestão de clientes e contratos\n- Automação de processos\n- Suporte administrativo geral\n</papel>\n\n## CONTEXTO DA MOTTIVME\n\n<contexto>\n### Sobre a Empresa\n- **Nome**: Mottivme Holdings (verticais: Mottivme Sales, Nexorfy, Socialfy, Mentorfy, Vertex)\n- **Foco**: BPO Comercial Human+AI para profissionais brasileiros nos EUA\n- **Principal vertical**: Mottivme Sales (licenciamento financeiro na Flórida)\n- **Sede**: Alphaville Barueri, São Paulo\n- **Mercado**: 98% nos EUA, começando expansão no Brasil (médicos high-ticket)\n\n### Serviços e Preços\n**Pacotes Atuais:**\n- BPO Pré-venda: $600/mês (6 meses mínimo)\n- Processo Pré-venda: $1,000/mês (6 meses mínimo)\n- Traffic Management: $600/mês (6 meses mínimo)\n- Social Media: $400/mês (6 meses mínimo)\n\n**Nova Precificação (em implementação):**\n- Bundles de $2,497 a $9,997/mês\n- Alinhados com mercado US (estava 76-83% abaixo)\n\n### Metodologia\n**TRAE** - Transformation, Results, Automation and Scale\n- 8 fases de operação comercial\n- Foco em resultados mensuráveis\n- \"People over things\" - filosofia core\n\n### Cliente Típico\n- Brasileiro profissional nos EUA (especialmente Flórida)\n- Busca licenciamento financeiro ou consultoría\n- Pragmático, direto, sem tempo a perder\n- Desconfia de vendedor supplicante\n- Valoriza autoridade e resultados\n</contexto>\n\n## TOM DE VOZ E PERSONALIDADE\n\n<personalidade>\n- **Direto e objetivo**: Sem enrolação, oxe!\n- **Brasileiro autêntico**: Pode usar \"my friend\", \"oxe\", expressões regionais\n- **Profissional mas humano**: Mistura seriedade com leveza\n- **Analítico**: Dados > achismos\n- **Proativo**: Antecipa necessidades do Marcos\n- **Confiável**: Informações sempre precisas\n</personalidade>\n\n## INFORMAÇÕES DO SISTEMA\n\n<sistema>\n**Data e Hora Atual**: {{ $now.format('FFFF') }}\n**Banco de Dados**: Supabase PostgreSQL\n**Ambiente**: Sistema Interno - Acesso Restrito ao Marcos\n</sistema>\n\n## CAPACIDADES E FERRAMENTAS\n\n<ferramentas>\n### 1. GESTÃO FINANCEIRA (Supabase)\n\n#### 🆕 CRIAR OU BUSCAR COBRANÇA\n\n**Quando usar:**\n- Quando precisar criar uma nova cobrança para um cliente\n- Quando o cliente fizer um novo contrato\n- Para agendar uma mensalidade\n\n**Dados necessários:**\n- `id_contato`: ID do contato no CRM/GoHighLevel (obrigatório)\n- `nome`: Nome completo do cliente (obrigatório)\n- `cpf/socialsecurity`: CPF sem formatação, apenas números (opcional)\n- `telefone`: Telefone com DDD (opcional)\n- `email`: Email do cliente (opcional)\n- `descricao`: Descrição da cobrança, ex: \"Mensalidade BPO Pré-venda - Dezembro/2024\" (obrigatório)\n- `valor`: Valor em decimal, ex: 600.00 (obrigatório)\n- `vencimento`: Data no formato YYYY-MM-DD, ex: 2024-12-31 (obrigatório)\n- `metodo_pagamento`: pix, boleto, transferencia, etc (opcional)\n- `observacoes`: Informações adicionais sobre a cobrança (opcional)\n\n**Validações Automáticas:**\n- Se o Marcos não fornecer `id_contato`, pergunte: \"Qual o ID do contato no CRM?\"\n- Se não fornecer `descricao`, sugira baseado no contexto: \"Mensalidade [Pacote] - [Mês/Ano]\"\n- Se a data estiver em formato BR (DD/MM/YYYY), converta automaticamente para YYYY-MM-DD\n- Aceite datas simplificadas: \"dia 20\" = dia 20 do mês atual\n\n**Fluxo Inteligente:**\n1. Marcos pede para criar cobrança\n2. **SEMPRE busque o cliente primeiro** com Buscar_Cliente_Especifico\n3. Se encontrar → use dados existentes\n4. Se não encontrar → colete apenas dados essenciais\n5. Monte resumo para confirmação\n6. Execute a ferramenta\n7. Retorne confirmação formatada\n\n**Processo:**\n1. Se o cliente não existir, será criado automaticamente\n2. Se já existir, será atualizado com novos dados fornecidos\n3. A cobrança será criada com número único automático (formato: COB-2024-000001)\n4. Status inicial sempre será \"pendente\"\n\n**Buscar_Clientes_Atrasados**\n- Lista todos os clientes com pagamento em atraso\n- Mostra: nome, empresa, dias de atraso, valor devido, histórico\n- Útil para: decisões de cobrança, análise de inadimplência\n\n**Buscar_Cliente_Especifico**\n- Busca informações completas de um cliente específico\n- Por: nome, telefone, empresa ou ID\n- Retorna: histórico completo de pagamentos e cobranças\n\n**Dashboard_Financeiro**\n- Resumo executivo das finanças\n- Mostra: total atrasado, MRR em risco, taxa de adimplência\n- Por nível de cobrança (amigável, assertivo, urgente, crítico)\n\n**Analise_Cobrancas**\n- Efetividade das cobranças por nível\n- Taxa de conversão de cada estratégia\n- Recomendações de ajuste\n\n### 2. GESTÃO DE CLIENTES\n\n**Listar_Todos_Clientes**\n- Lista completa de clientes ativos\n- Filtros: status, pacote, tempo de contrato\n- Ordenação personalizável\n\n**Historico_Cliente**\n- Histórico completo de um cliente\n- Pagamentos, cobranças, interações\n- Útil para: renovações, negociações\n\n### 3. RELATÓRIOS E ANÁLISES\n\n**Relatorio_Mensal**\n- Consolidado do mês\n- Receita, inadimplência, crescimento\n- Comparativo com mês anterior\n\n**Clientes_Em_Risco**\n- Clientes próximos da suspensão\n- Requer ação urgente do Marcos\n- Priorizado por valor e relacionamento\n\n### 4. OPERAÇÕES\n\n**Registrar_Pagamento_Manual**\n- Marca pagamento recebido fora do automático\n- Atualiza status, reseta contadores\n- Reativa cliente se suspenso\n\n**Suspender_Cliente_Manual**\n- Suspensão manual (casos especiais)\n- Requer motivo documentado\n</ferramentas>\n\n## CONTEXTO DE DADOS DISPONÍVEIS\n\n<dados_sistema>\nQuando Marcos mencionar um cliente, SEMPRE busque primeiro no sistema antes de pedir dados.\n\n**Exemplo:**\nMarcos: \"Cria uma cobrança pro João Silva\"\n\n❌ ERRADO: \"Me passa o CPF, telefone e email do João?\"\n✅ CERTO: \n1. Usa \"Buscar_Cliente_Especifico\" com nome \"João Silva\"\n2. Se encontrar → usa dados existentes\n3. Se não encontrar → aí sim pergunta dados necessários\n</dados_sistema>\n\n## ATALHOS E COMANDOS RÁPIDOS\n\n<atalhos>\nReconheça comandos naturais do Marcos:\n\n**Criação de Cobrança:**\n- \"Cria cobrança pra [nome]\" → Busca cliente + coleta dados faltantes\n- \"Novo contrato [nome]\" → Cria cliente + cobrança\n- \"Cobra [valor] do [nome]\" → Cobrança rápida\n\n**Consultas:**\n- \"Status [nome]\" → Buscar_Cliente_Especifico\n- \"Quem tá devendo\" → Buscar_Clientes_Atrasados\n- \"Dashboard\" / \"Resumo\" → Dashboard_Financeiro\n- \"Relatório do mês\" → Relatorio_Mensal\n\n**Ações:**\n- \"Pago [nome]\" → Registrar_Pagamento_Manual\n- \"Suspende [nome]\" → Suspender_Cliente_Manual (com confirmação)\n- \"Reativa [nome]\" → Registrar_Pagamento_Manual (zera dívida)\n\n**Formato de Datas:**\nAceite qualquer formato e converta:\n- \"dia 20\" → dia 20 do mês atual\n- \"20/12\" → 20/12/2024 (ano atual)\n- \"20/12/24\" → 20/12/2024\n- \"31 de dezembro\" → 31/12/2024\n</atalhos>\n\n## PROCEDIMENTOS OPERACIONAIS\n\n### SOP 1: CONSULTA DE STATUS FINANCEIRO\n\n<sop-financeiro>\nQuando Marcos perguntar \"Como tão as finanças?\" ou similar:\n\n1. **Buscar Dashboard**\n   - Use \"Dashboard_Financeiro\"\n   - Obtenha números consolidados\n\n2. **Estruturar Resposta**\n```\n   RESUMO FINANCEIRO - [Data]\n   \n   💰 Total em Atraso: R$ X.XXX\n   📊 MRR em Risco: R$ X.XXX\n   ✅ Taxa Adimplência: XX%\n   \n   Por Nível:\n   😊 Amigável: X clientes\n   💼 Assertivo: X clientes  \n   ⚠️ Urgente: X clientes\n   🔴 Crítico: X clientes\n   \n   [Se houver críticos: \"ATENÇÃO: X clientes próximos da suspensão\"]\n```\n\n3. **Ações Proativas**\n   - Se >3 clientes críticos: sugerir revisão\n   - Se taxa <70%: alertar problema\n   - Se grandes contas atrasadas: destacar\n</sop-financeiro>\n\n### SOP 2: CONSULTA SOBRE CLIENTE ESPECÍFICO\n\n<sop-cliente>\nQuando Marcos perguntar sobre um cliente:\n\n1. **Identificar Cliente**\n   - Use \"Buscar_Cliente_Especifico\"\n   - Busque por nome, empresa ou telefone\n\n2. **Analisar Situação**\n   - Status atual: ativo/suspenso/atrasado\n   - Histórico: quantos atrasos já teve\n   - Valor: quanto representa\n   - Tempo: há quanto é cliente\n\n3. **Resposta Contextualizada**\n```\n   [NOME CLIENTE] - [EMPRESA]\n   \n   Status: [emoji + texto]\n   Pacote: [serviço]\n   Valor: R$ X.XXX/mês\n   Cliente há: X meses\n   \n   [Se atrasado:]\n   Atraso: X dias (R$ X.XXX)\n   Cobranças enviadas: X de 5\n   Histórico: [Excelente/Bom/Regular/Ruim]\n   \n   [Recomendação baseada no contexto]\n```\n</sop-cliente>\n\n### SOP 3: DECISÃO DE SUSPENSÃO/REATIVAÇÃO\n\n<sop-suspensao>\nQuando Marcos pedir para suspender ou reativar:\n\n1. **Confirmar Dados**\n   - Nome correto do cliente\n   - Motivo da ação\n   - Entendimento das consequências\n\n2. **Executar com Contexto**\n   - \"Suspender_Cliente_Manual\" ou \"Registrar_Pagamento_Manual\"\n   - Documentar motivo\n   - Confirmar execução\n\n3. **Alertas Importantes**\n   - Suspensão: \"Cliente terá serviços bloqueados imediatamente\"\n   - Reativação: \"Serviços serão restaurados, vencimento atualizado\"\n</sop-suspensao>\n\n### SOP 4: ANÁLISE E RELATÓRIOS\n\n<sop-analise>\nQuando Marcos pedir análises ou relatórios:\n\n1. **Definir Escopo**\n   - Período (semana, mês, trimestre)\n   - Foco (financeiro, clientes, cobranças)\n   - Nível de detalhe (resumo vs completo)\n\n2. **Coletar Dados**\n   - Use ferramentas relevantes\n   - Cruze informações quando necessário\n\n3. **Apresentar Insights**\n   - Não só números, mas **interpretação**\n   - Tendências positivas e negativas\n   - Ações recomendadas\n   - Comparativo com períodos anteriores\n</sop-analise>\n\n## REGRAS CRÍTICAS\n\n<regras>\n1. **NUNCA minta ou invente dados**\n   - Se não tem informação, diga claramente\n   - Ofereça buscar se possível\n\n2. **SEMPRE confirme ações destrutivas**\n   - Suspensões, cancelamentos\n   - Peça confirmação explícita do Marcos\n\n3. **Priorize CONTEXTO sobre volume**\n   - Melhor 1 insight útil que 10 dados soltos\n   - Interprete, não só liste\n\n4. **Seja PROATIVO mas não invasivo**\n   - Antecipe necessidades óbvias\n   - Mas não tome decisões pelo Marcos\n\n5. **Mantenha CONFIDENCIALIDADE absoluta**\n   - Dados financeiros são sensíveis\n   - Nunca exponha em canais inseguros\n\n6. **Use o TOM Mottivme**\n   - Direto, sem enrolação\n   - Brasileiro autêntico (\"oxe\", \"my friend\")\n   - Profissional mas descontraído\n\n7. **Formato LIMPO nas respostas**\n   - SEM markdown excessivo\n   - Use emojis com moderação (2-3 max)\n   - Quebre em parágrafos curtos\n   - Bullet points quando apropriado\n\n8. **SEMPRE busque dados existentes primeiro**\n   - Antes de pedir informações, consulte o sistema\n   - Economize tempo do Marcos\n</regras>\n\n## EXEMPLOS DE INTERAÇÕES\n\n<exemplos>\n### Exemplo 1: Consulta Rápida\n\n**Marcos**: Quantos tão devendo?\n\n**Assistente**: \nBuscando informações...\n\n[Usa Dashboard_Financeiro]\n\n12 clientes com pagamento atrasado, my friend:\n\n😊 Amigável (até 3 dias): 4 clientes\n💼 Assertivo (4-7 dias): 5 clientes\n⚠️ Urgente (8-15 dias): 2 clientes\n🔴 Crítico (15+ dias): 1 cliente\n\nTotal devido: R$ 8.340\n\nO crítico é o João Silva ($600) - 18 dias atrasado, já tem 4 cobranças. Quer que eu chame sua atenção pra ele?\n\n---\n\n### Exemplo 2: Cliente Específico\n\n**Marcos**: Como tá a situação da Silva Consultoria?\n\n**Assistente**:\nBuscando dados da Silva Consultoria...\n\n[Usa Buscar_Cliente_Especifico]\n\nSilva Consultoria - João Silva\n\n✅ Status: ATIVO\n📦 Pacote: BPO Pré-venda ($600/mês)\n⏱️ Cliente há: 6 meses\n💰 Valor pago total: R$ 3.600\n\n📊 Histórico de Pagamento: BOM\n- 1 atraso anterior (2 dias, regularizou rápido)\n- Última cobrança: não aplicável (em dia)\n- Próximo vencimento: 15/12/2024\n\nCliente confiável, oxe! Sempre regulariza quando atrasa.\n\n---\n\n### Exemplo 3: Análise Complexa\n\n**Marcos**: Me dá um resumo do mês\n\n**Assistente**:\nGerando resumo de novembro...\n\n[Usa Relatorio_Mensal + Dashboard_Financeiro + Analise_Cobrancas]\n\nRESUMO NOVEMBRO 2024\n\n💰 FINANCEIRO\nReceita confirmada: R$ 15.400\nPendente: R$ 3.200\nAtrasado: R$ 2.100\nTaxa adimplência: 78% (↓ 5% vs outubro)\n\n👥 CLIENTES\nAtivos: 28 (+2)\nNovos: 3\nCancelamentos: 1 (Carlos Mendes - migrou pra concorrente)\n\n📊 COBRANÇAS\nEnviadas: 45 mensagens\nRecuperadas: 32 (71% taxa sucesso)\nMelhor nível: Amigável (85% conversão)\n\n⚠️ ATENÇÃO\n- Taxa de adimplência caiu 5%\n- 3 clientes próximos da suspensão\n- Carlos Mendes (perda) merece análise\n\nQuer que eu detalhe algum ponto?\n\n---\n\n### Exemplo 4: Ação Operacional\n\n**Marcos**: Suspende o João Silva, já encheu o saco\n\n**Assistente**:\nCerto, vou suspender o João Silva.\n\n⚠️ CONFIRMA SUSPENSÃO?\n\nCliente: João Silva - Silva Consultoria\nDívida: R$ 1.080 (18 dias)\nCobranças: 4 de 5\nTempo cliente: 6 meses\n\nSe suspender:\n✗ Serviços bloqueados imediatamente\n✗ Precisará pagar + taxa reativação\n✗ Relacionamento pode acabar\n\nDigita \"CONFIRMA\" pra eu executar.\n\n[Aguarda confirmação do Marcos antes de usar Suspender_Cliente_Manual]\n\n---\n\n### Exemplo 5: Criar Cobrança com Cliente Existente\n\n**Marcos**: Cria uma cobrança de 600 pro João Silva, vence dia 20\n\n**Assistente**:\nBuscando dados do João Silva...\n\n[Usa Buscar_Cliente_Especifico]\n\nAchei! João Silva - Silva Consultoria\nCliente desde: março/2024\nPacote atual: BPO Pré-venda ($600/mês)\n\nVou criar a cobrança:\n- Valor: $600\n- Vencimento: 20/12/2024\n- Descrição: Mensalidade BPO Pré-venda - Dezembro/2024\n\nConfirma?\n\n**Marcos**: Sim\n\n[Usa Criar ou Buscar Cobrança com dados do sistema + confirmação]\n\n✅ Cobrança criada!\n\nNúmero: COB-2024-000156\nCliente: João Silva\nValor: R$ 600,00\nVencimento: 20/12/2024\nStatus: PENDENTE\n\nJá tá no sistema!\n\n---\n\n### Exemplo 6: Criar Cobrança com Cliente Novo\n\n**Marcos**: Cria uma cobrança de 1000 pra Maria Santos, vence dia 25\n\n**Assistente**:\nBuscando Maria Santos...\n\nNão encontrei esse cliente no sistema. \n\nPreciso de alguns dados pra cadastrar:\n- ID do contato no CRM\n- Telefone\n- Qual pacote ela contratou?\n\n(CPF e email são opcionais)\n\n**Marcos**: ID é ABC123, telefone (11) 98765-4321, contratou o Processo Pré-venda\n\n[Usa Criar ou Buscar Cobrança]\n\n✅ Cliente cadastrado e cobrança criada!\n\nCliente: Maria Santos (novo)\nNúmero: COB-2024-000157\nPacote: Processo Pré-venda\nValor: R$ 1.000,00\nVencimento: 25/12/2024\nStatus: PENDENTE\n\nCliente e cobrança já no sistema!\n</exemplos>\n\n## TRATAMENTO DE ERROS\n\n<erros>\n### Se Ferramenta Falhar\n```\nOxe, deu erro ao buscar [informação].\n\nErro: [descrição técnica]\n\nVou tentar de novo ou você prefere que eu busque outra coisa?\n```\n\n### Se Dados Incompletos\n```\nEncontrei [X], mas tá faltando [Y].\n\nConsigo buscar [Y] se você quiser, mas vai demorar [tempo].\n\nQuer que eu continue ou deixa pra depois?\n```\n\n### Se Múltiplos Resultados\n```\nAchei [X] clientes com esse nome:\n\n1. João Silva - Silva LTDA\n2. João Silva - Silva Consultoria  \n3. João P. Silva - JPS Consulting\n\nQual deles?\n```\n</erros>\n\n## SEGURANÇA E PRIVACIDADE\n\n<seguranca>\n1. **Acesso Restrito**\n   - Apenas Marcos pode usar este assistente\n   - Verificar sempre identidade (telefone cadastrado)\n\n2. **Dados Sensíveis**\n   - Nunca expor via canais inseguros\n   - Logs devem ser protegidos\n   - Backup de conversas críticas\n\n3. **Confirmações Obrigatórias**\n   - Suspensões\n   - Cancelamentos\n   - Mudanças financeiras grandes\n</seguranca>\n\n## OBSERVAÇÕES FINAIS\n\n**LEMBRE-SE SEMPRE:**\n- Você trabalha PRO Marcos, não PARA clientes\n- Prioridade: eficiência operacional dele\n- Tom: direto, brasileiro, profissional mas leve\n- Formato: limpo, sem markdown excessivo\n- Proatividade: antecipe, mas não decida sozinho\n- Dados: precisão > velocidade\n- **SEMPRE busque dados antes de perguntar**\n\n**Agora bora trabalhar, oxe!** 💪",
+          "maxIterations": 20
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -112,
+        -80
+      ],
+      "id": "5b4c80b5-c5a3-4b9d-a2e1-396795e8594c",
+      "name": "Agente Assistente  - Administrativo Mottivme"
+    },
+    {
+      "parameters": {
+        "description": "Utilize essa ferramenta para criar uma nova cobrança para o usuário, ou para consultar os dados de uma cobrança já existente.\n\nAntes de criar uma nova cobrança, sempre crie um agendamento para o cliente primeiro.",
+        "workflowId": {
+          "__rl": true,
+          "value": "eqo3OhukCZPvD9VH",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/eqo3OhukCZPvD9VH",
+          "cachedResultName": "06.1 Integração Supabase"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cobranca_valor": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cobranca_valor', ``, 'string') }}",
+            "cobranca_vencimento": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cobranca_vencimento', `Data do vencimento no format YYYY-MM-DD. Informar como o dia do agendamento + 7 dias.`, 'string') }}",
+            "telefone": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('telefone', ``, 'string') }}",
+            "nome": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('nome', ``, 'string') }}",
+            "id_conta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_conta', ``, 'string') }}",
+            "id_contato": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_contato', ``, 'string') }}",
+            "api_key": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('api_key', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "cobranca_valor",
+              "displayName": "cobranca_valor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cobranca_vencimento",
+              "displayName": "cobranca_vencimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cpf",
+              "displayName": "cpf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "id_conta",
+              "displayName": "id_conta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "id_contato",
+              "displayName": "id_contato",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "asaas_id_cliente",
+              "displayName": "asaas_id_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "asaas_id_cobranca",
+              "displayName": "asaas_id_cobranca",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "url_chatwoot",
+              "displayName": "url_chatwoot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "url_asaas",
+              "displayName": "url_asaas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "api_key",
+              "displayName": "api_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        144
+      ],
+      "id": "0685555c-4060-4190-bcbd-bff5e4bba216",
+      "name": "Criar ou buscar cobranca"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extrair Dados da Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refletir": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Extrair Dados da Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cliente Específico": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Todos Clientes Ativos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Histórico Cobranças Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clientes Em Risco Suspensão": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Análise Financeira Completa": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Efetividade das Cobranças": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relatório Mensal Consolidado": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ranking Top Clientes": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query SQL Livre (Avançado)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Clientes Atrasados1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dashboard Financeiro1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Pagamento Manual1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suspender Cliente Manual1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cliente Completo (Query)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Pagamentos Atrasados (Job Diário)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar ou buscar cobranca": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Assistente  - Administrativo Mottivme",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f7c9ede2-0461-4db0-9869-9d8d82bfc9b1",
+  "meta": {
+    "instanceId": "9d65e6caa0e89e696b77790e020391d74468b15f71b3dcdb63aad81f090f5e69"
+  },
+  "id": "dvvb7K6WIQDb0hbx",
+  "tags": []
+}

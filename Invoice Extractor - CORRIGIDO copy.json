@@ -1,0 +1,702 @@
+{
+  "name": "Invoice Extractor - CORRIGIDO copy",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Aqui está a tradução e adaptação para português Brasil, mantendo clareza e objetividade:\n\n---\n\n## Copie o Airtable – Guia Rápido\n\n### 1. **Assista ao vídeo tutorial**\n\n[https://www.tella.tv/video/copy-the-airtable-and-setup-access-dm4e](https://www.tella.tv/video/copy-the-airtable-and-setup-access-dm4e)\n\n### 2. **Faça uma cópia da base “Financial”**\n\n[https://airtable.com/appFx3ID8xjW6CRsH/shr52Le7VbagkTn3n](https://airtable.com/appFx3ID8xjW6CRsH/shr52Le7VbagkTn3n)\n\n### 3. **Crie seu access token (chave de acesso)**\n\n[https://airtable.com/create/tokens](https://airtable.com/create/tokens)?",
+        "height": 300,
+        "width": 760,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        784
+      ],
+      "id": "1773c455-debe-47d3-af06-84a505d46cbd",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        848
+      ],
+      "id": "f0d57344-c194-40cc-b227-d6c46c491bb9",
+      "name": "GetRecords",
+      "notesInFlow": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Instruções de configuração (leia com atenção)\n\n## Suporte\n\nAcesse a seção 🆘 [Ajuda & Suporte](https://www.skool.com/scrapes?c=1b75753046524e228793efed20f0fc54&s=newest-cm&fl=), poste **o máximo de informações possível**, incluindo a **mensagem de erro** e o **arquivo JSON** caso tenha editado algum template 😊 — retornaremos o mais rápido possível!\n\nPara recursos para iniciantes e outros templates úteis, acesse a **[Classroom](https://www.skool.com/scrapes/classroom)**\n\n## Recompensas\n\nCompartilhe suas criações e progresso no Skool ou nas redes sociais para ganhar recompensas e prêmios adicionais [aqui](https://www.skool.com/scrapes?c=&s=newest-cm&fl=)\n\n## Outros recursos\n\n### [scrapes.ai](https://www.scrapes.ai) — central de workflows de IA e automações\n\n### [Insights semanais sobre IA + benefícios exclusivos](https://scrapes-ai.kit.com/b6b1a73dfd)\n\n### [Comunidade no Skool](https://www.skool.com/scrapes)",
+        "height": 571,
+        "width": 757,
+        "color": 7
+      },
+      "id": "f59fcd26-bbc6-43de-84f2-ac0dafe55589",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"Invoice number\",\n    \"Invoice date\",\n    \"Description\",\n    \"Payment date\",\n    \"Type\",\n    \"Total price\",\n    \"Currency\"\n  ],\n  \"properties\": {\n    \"Invoice number\": { \n      \"type\": \"string\",\n      \"description\": \"Número da fatura\"\n    },\n    \"Invoice date\": { \n      \"type\": \"string\",\n      \"format\": \"date\",\n      \"description\": \"Data da fatura (YYYY-MM-DD)\"\n    },\n    \"Description\": { \n      \"type\": \"string\",\n      \"description\": \"Resumo da fatura em 1-2 linhas\"\n    },\n    \"Payment date\": { \n      \"type\": \"string\",\n      \"format\": \"date\",\n      \"description\": \"Data do pagamento (YYYY-MM-DD)\"\n    },\n    \"Type\": { \n      \"type\": \"string\",\n      \"enum\": [\"Recorrente Mensal\", \"Recorrente Anual\", \"Pagamento Único\"]\n    },\n    \"Total price\": { \n      \"type\": \"number\",\n      \"description\": \"Valor total sem moeda\"\n    },\n    \"Currency\": { \n      \"type\": \"string\",\n      \"enum\": [\"USD\", \"EUR\", \"BRL\", \"GBP\", \"ILS\"]\n    },\n    \"Purchase order number\": { \"type\": \"string\" },\n    \"Supplier name\": { \"type\": \"string\" },\n    \"Supplier VAT identification number\": { \"type\": \"string\" },\n    \"Customer name\": { \"type\": \"string\" },\n    \"Line items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"name\": { \"type\": \"string\" },\n          \"description\": { \"type\": \"string\" },\n          \"price\": { \"type\": \"number\" },\n          \"discount\": { \"type\": \"number\" }\n        }\n      }\n    },\n    \"Subtotal without VAT\": { \"type\": \"number\" },\n    \"Subtotal with VAT\": { \"type\": \"number\" },\n    \"Additional information\": { \"type\": \"string\" }\n  }\n}"
+      },
+      "id": "b83f85c5-e512-4d20-84d8-006ad180eabd",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        2208,
+        592
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        464
+      ],
+      "id": "4d6efad1-1918-468f-b651-abfeca950408",
+      "name": "Auto-fixing Output Parser"
+    },
+    {
+      "parameters": {
+        "content": "## Monitors GDrive - CORRETO\n\nPolls for new attachments",
+        "height": 293,
+        "width": 343,
+        "color": 7
+      },
+      "id": "2bf73b93-2bbe-4a25-8524-27ff8fed13e8",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1008,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of items) {\n  if (item.json.text) {\n    item.json.text = item.json.text\n      .replace(/\\r?\\n|\\r/g, ' ') // Remove newlines\n      .replace(/\\s+/g, ' ') // Remove extra spaces\n      .replace(/[^\\p{L}\\p{N}\\s.,]/gu, '') // Remove special characters except letters, numbers, periods and commas\n      .trim(); // Remove leading/trailing spaces\n  }\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        256
+      ],
+      "id": "683e966d-aef7-415a-9001-6f61e63390d5",
+      "name": "Format"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1hk52w5ZBvxlDC3vL5OcMYefZZdSZ0Zpx",
+          "mode": "list",
+          "cachedResultName": "[MOTTIVMEAI] - Financeiro",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1hk52w5ZBvxlDC3vL5OcMYefZZdSZ0Zpx"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        256
+      ],
+      "id": "7d85d835-1a4d-4bfa-b274-af80f3c36023",
+      "name": "GDrive_Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "huUvmVlBHgVbw2p1",
+          "name": "drive marcos - supabase - supercérebro"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1216,
+        256
+      ],
+      "id": "88836747-5af0-488a-aaeb-4b0838bb725a",
+      "name": "GetFile",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "huUvmVlBHgVbw2p1",
+          "name": "drive marcos - supabase - supercérebro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        256
+      ],
+      "id": "0db5dc9b-1c77-4662-bc36-2659c074463e",
+      "name": "ExtractFromPDF"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        512
+      ],
+      "id": "2f680822-94eb-4053-b72f-ad01291c8db2",
+      "name": "Execute_Trigger"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1760,
+        256
+      ],
+      "id": "ca2a469b-b041-49bd-b0aa-596f2d4ab71e",
+      "name": "ProcessOne"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Aqui está a tradução para português Brasil, adaptada ao contexto corporativo brasileiro:\n\n---\n\nDado o seguinte invoice (nota fiscal/fatura) dentro das tags `<invoice>`, extraia as seguintes informações conforme listado abaixo.\nSe você não encontrar a informação para algum item específico, deixe em branco e siga para o próximo.\n\n**Dados obrigatórios:**\n\n* **Descrição** – resumo curto (1–2 linhas) da fatura. Ex: “Uso mensal do banco de dados Supabase” – OBRIGATÓRIO\n* **Tipo** – [OPÇÕES: Recorrente Mensal, Recorrente Anual, Pagamento Único] – OBRIGATÓRIO\n* **Data da fatura** (data em que a fatura foi recebida) – OBRIGATÓRIO\n* **Data do pagamento** (data em que o valor será debitado/pago — pode ser diferente da data de emissão) – OBRIGATÓRIO\n* **Número da fatura (invoice number)** – OBRIGATÓRIO\n* **Número do pedido (purchase order / PO)**\n* **Nome do fornecedor**\n* **CNPJ ou VAT do fornecedor**\n* **Itens detalhados** – descrição dos produtos ou serviços prestados\n* **Preço com e sem impostos (sem moeda)**\n* **Preço total (sem moeda)** – OBRIGATÓRIO\n* **Moeda (USD, Shekel Israelense, Euro, GBP)** – OBRIGATÓRIO\n\n**Informações adicionais relevantes (se houver):**\n\n* Condições de pagamento (ex: Net 30, pagamento imediato, etc.)\n* Métodos de pagamento aceitos\n* Dados bancários para transferência\n* Condições de desconto por pagamento antecipado\n* Multa ou juros por atraso\n* Referência de isenção fiscal\n* Referência a contrato ou acordo-quadro\n* Termos de entrega\n* Instruções especiais\n* Contato para dúvidas financeiras / cobrança\n* Política de reembolso/devolução\n* Informações de garantia (se aplicável)\n* Certificado de origem (se houver)\n* Requisitos de seguro\n* Informações aduaneiras (para envio internacional)\n\n```\n<invoice>{{ $('ProcessOne').item.json.text }}</invoice>",
+        "hasOutputParser": true
+      },
+      "id": "db9b7af4-9252-4279-8c8d-80fcbbf1e636",
+      "name": "ExtractDataLLM",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        2016,
+        256
+      ],
+      "typeVersion": 1.4,
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appGwDaPfVia23J5d",
+          "mode": "list",
+          "cachedResultName": "scrapes.ai - tutorials",
+          "cachedResultUrl": "https://airtable.com/appGwDaPfVia23J5d"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwHCeEb0Xg69CFM",
+          "mode": "list",
+          "cachedResultName": "Financial",
+          "cachedResultUrl": "https://airtable.com/appFx3ID8xjW6CRsH/tblwHCeEb0Xg69CFM"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Invoice number": "={{ $('ExtractDataLLM').item.json.output['Invoice number'] }}",
+            "Invoice date": "={{ $('ExtractDataLLM').item.json.output['Invoice date'] }}",
+            "Purchase order number": "={{ $('ExtractDataLLM').item.json.output['Purchase order number'] }}",
+            "Supplier name": "={{ $('ExtractDataLLM').item.json.output['Supplier name'] }}",
+            "Supplier VAT number": "={{ $('ExtractDataLLM').item.json.output['Supplier VAT identification number'] }}",
+            "Line items": "={{ $('ExtractDataLLM').item.json.output['Line items'] }}",
+            "Total price": "={{ $('ExtractDataLLM').item.json.output['Total price'] }}",
+            "Currency": "={{ $('ExtractDataLLM').item.json.output.Currency }}",
+            "Description": "={{ $('ExtractDataLLM').item.json.output['Description'] }}",
+            "Payment date": "={{ $('ExtractDataLLM').item.json.output['Payment date'] }}",
+            "Type": "={{ $('ExtractDataLLM').item.json.output['Type'] }}",
+            "Additional info": "={{ $('ExtractDataLLM').item.json.output['Additional information'] }}",
+            "Invoice URL": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json.webViewLink : 'No attachment'  }}"
+          },
+          "matchingColumns": [
+            "Invoice number"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice number",
+              "displayName": "Invoice number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Invoice date",
+              "displayName": "Invoice date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Payment date",
+              "displayName": "Payment date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Annual Recurring",
+                  "value": "Annual Recurring"
+                },
+                {
+                  "name": "Monthly Recurring",
+                  "value": "Monthly Recurring"
+                },
+                {
+                  "name": "Single Payment",
+                  "value": "Single Payment"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Total price",
+              "displayName": "Total price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Line items",
+              "displayName": "Line items",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Purchase order number",
+              "displayName": "Purchase order number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Supplier name",
+              "displayName": "Supplier name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Supplier address",
+              "displayName": "Supplier address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Supplier VAT number",
+              "displayName": "Supplier VAT number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Additional info",
+              "displayName": "Additional info",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_updated",
+              "displayName": "last_updated",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice URL",
+              "displayName": "Invoice URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2416,
+        256
+      ],
+      "id": "11b6ba22-c5c3-4d05-92f8-8cd5e85e6bcc",
+      "name": "UpdateFinancials",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "Ct29AFjU5kldAr8c",
+          "name": "vsl ben ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        432
+      ],
+      "id": "9f645dde-0dcc-4fcb-bbab-a8aab91eaff8",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "WEENPovt22LUaeRp",
+          "name": "OpenAi - Marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Data processing",
+        "height": 293,
+        "width": 303,
+        "color": 7
+      },
+      "id": "feaa113b-f4be-4e13-ab53-ad73d2912163",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1376,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## AI Extracts Key Data\nPrompt",
+        "height": 293,
+        "width": 643,
+        "color": 7
+      },
+      "id": "2360ce90-d4e6-4aa7-95af-e0849e422768",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1696,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Post details Airtable\nRecord-keeping",
+        "height": 313,
+        "width": 263,
+        "color": 7
+      },
+      "id": "18c0291b-5f6f-4f50-b035-e52c61a0d78a",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2352,
+        144
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "ExtractDataLLM",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format": {
+      "main": [
+        [
+          {
+            "node": "ProcessOne",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GDrive_Trigger": {
+      "main": [
+        [
+          {
+            "node": "GetFile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetFile": {
+      "main": [
+        [
+          {
+            "node": "ExtractFromPDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractFromPDF": {
+      "main": [
+        [
+          {
+            "node": "Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute_Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessOne": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ExtractDataLLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractDataLLM": {
+      "main": [
+        [
+          {
+            "node": "UpdateFinancials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateFinancials": {
+      "main": [
+        [
+          {
+            "node": "ProcessOne",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ExtractDataLLM",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5598befd-2490-4fc7-b77b-8845d64c019c",
+  "meta": {
+    "instanceId": "9d65e6caa0e89e696b77790e020391d74468b15f71b3dcdb63aad81f090f5e69"
+  },
+  "id": "6ICzyTrrI5J9PJQD",
+  "tags": [
+    {
+      "updatedAt": "2025-09-21T11:20:13.284Z",
+      "createdAt": "2025-09-21T11:20:13.284Z",
+      "id": "biJdFsDQT6ubhUzT",
+      "name": "adm"
+    }
+  ]
+}

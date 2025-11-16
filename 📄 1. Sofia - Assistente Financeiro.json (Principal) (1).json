@@ -1,0 +1,1538 @@
+{
+  "name": "📄 1. Sofia - Assistente Financeiro.json (Principal)",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "leads",
+        "filter": {
+          "id": "={{ $json.lead_id }}"
+        },
+        "options": {
+          "with": [
+            "contacts"
+          ]
+        }
+      },
+      "type": "n8n-nodes-kommo.kommo",
+      "typeVersion": 1,
+      "position": [
+        -1856,
+        1184
+      ],
+      "id": "a37815fe-a355-4177-987d-da13e06b5a6f",
+      "name": "Retornar o Lead",
+      "retryOnFail": true,
+      "credentials": {
+        "kommoOAuth2Api": {
+          "id": "FoQopIcfFleo2ymy",
+          "name": "MottivmeAI - NV1 - Apex Pro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extração de dados do documento financeiro\nconst documento = $('Retornar o Lead').first().json;\n\nfunction extrairDadosFinanceiros(doc) {\n  try {\n    const lead = doc._embedded?.leads?.[0] || {};\n    const customFields = lead.custom_fields_values || [];\n    \n    const dados = {\n      lead_id: lead.id || null,\n      nome_cliente: lead.name || 'Cliente não identificado',\n      tipo_documento: customFields.find(f => f.field_name === 'Tipo Documento')?.values?.[0]?.value || 'desconhecido',\n      valor: customFields.find(f => f.field_name === 'Valor')?.values?.[0]?.value || null,\n      data_vencimento: customFields.find(f => f.field_name === 'Data Vencimento')?.values?.[0]?.value || null,\n      beneficiario: customFields.find(f => f.field_name === 'Beneficiário')?.values?.[0]?.value || null,\n      categoria: customFields.find(f => f.field_name === 'Categoria')?.values?.[0]?.value || 'Não categorizado',\n      created_at: lead.created_at ? new Date(lead.created_at * 1000).toISOString() : new Date().toISOString()\n    };\n    \n    return {\n      success: true,\n      data: dados\n    };\n  } catch (error) {\n    return {\n      success: false,\n      message: `Erro ao processar: ${error.message}`,\n      data: null\n    };\n  }\n}\n\nconst result = extrairDadosFinanceiros(documento);\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        1280
+      ],
+      "id": "a80734f9-f63f-4028-a974-3a03ccf3bac3",
+      "name": "Formatacao",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Assistente Financeiro - Mottivme Sales\".sofia_documentos_financeiros \nSET ultima_tentativa = NOW() \nWHERE lead_id = $1;",
+        "options": {
+          "queryReplacement": "={{ $json._embedded.leads[0].id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1632,
+        896
+      ],
+      "id": "94b44ace-c510-42b1-9437-c04edab43f29",
+      "name": "Atualiza status IA",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_historico_transacoes",
+          "mode": "list",
+          "cachedResultName": "sofia_historico_transacoes"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "lead_id",
+              "value": "={{ $json._embedded.leads[0].id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1632,
+        1088
+      ],
+      "id": "86ff6087-1c92-47e1-9a2d-9ca06a91abb4",
+      "name": "Mensagem anteriores",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1408,
+        1056
+      ],
+      "id": "913be1b7-6a54-4075-acb2-2b336127c0d0",
+      "name": "Merge",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Formatacao').item.json.success }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "switch-processa"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Processar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "switch-ignora",
+                    "leftValue": true,
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ignorar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1184,
+        1312
+      ],
+      "id": "a5abea8e-d3e3-45eb-b5f0-93c8732c5391",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2304,
+        912
+      ],
+      "id": "0f7b7ef5-7664-46d3-9e03-73d19ebaca07",
+      "name": "Fim"
+    },
+    {
+      "parameters": {
+        "dataToSave": {
+          "values": [
+            {
+              "key": "lead_id",
+              "value": "={{ $('Formatacao').first().json.data.lead_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executionData",
+      "typeVersion": 1.1,
+      "position": [
+        -960,
+        1312
+      ],
+      "id": "14a03fa0-763f-4474-a3d8-93fa6648665d",
+      "name": "Execution Data",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_contexto_financeiro",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "lead_id",
+              "value": "={{ $('Formatacao').first().json.data.lead_id.toString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -736,
+        1312
+      ],
+      "id": "0e349612-1f35-4f01-9755-37f52d65a59c",
+      "name": "Busca Rastreio",
+      "retryOnFail": true,
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "lead-id",
+              "name": "lead_id",
+              "value": "={{ $('Formatacao').first().json.data.lead_id }}",
+              "type": "number"
+            },
+            {
+              "id": "nome-cliente",
+              "name": "nome_cliente",
+              "value": "={{ $('Formatacao').first().json.data.nome_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "tipo-doc",
+              "name": "tipo_documento",
+              "value": "={{ $('Formatacao').first().json.data.tipo_documento }}",
+              "type": "string"
+            },
+            {
+              "id": "valor",
+              "name": "valor",
+              "value": "={{ $('Formatacao').first().json.data.valor }}",
+              "type": "number"
+            },
+            {
+              "id": "vencimento",
+              "name": "data_vencimento",
+              "value": "={{ $('Formatacao').first().json.data.data_vencimento }}",
+              "type": "string"
+            },
+            {
+              "id": "beneficiario",
+              "name": "beneficiario",
+              "value": "={{ $('Formatacao').first().json.data.beneficiario }}",
+              "type": "string"
+            },
+            {
+              "id": "categoria",
+              "name": "categoria",
+              "value": "={{ $('Formatacao').first().json.data.categoria }}",
+              "type": "string"
+            },
+            {
+              "id": "historico",
+              "name": "historico_transacoes",
+              "value": "={{ $('Mensagem anteriores').all().map(item => `[${new Date(item.json.created_at).toLocaleString('pt-BR')}] ${item.json.descricao}: R$ ${item.json.valor}`).join('\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -512,
+        1312
+      ],
+      "id": "7f2581f8-0e52-4baf-9be2-1d76282a2ab0",
+      "name": "Informações Relevantes - Sofia"
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.tipo_documento }} - Valor: R$ {{ $json.valor }} - Vencimento: {{ $json.data_vencimento }}",
+        "options": {
+          "categories": "Urgente, Normal, Baixa_Prioridade",
+          "includeDetailedResults": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        1312
+      ],
+      "id": "e9e6dfe5-9f5c-426a-9567-48dd9233739a",
+      "name": "Sentiment Analysis",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[Documento financeiro recebido para análise...]",
+        "options": {
+          "systemMessage": "=## 💰 PAPEL\n\nVocê é Sofia, Secretária Executiva Financeira especializada em contas a pagar e receber. Analisa documentos financeiros (PDFs, planilhas, imagens), extrai dados de pagamentos/recebimentos, categoriza transações, valida duplicidades e prepara lançamentos.\n\n📌 Data/hora atual: `{{ $now.format('FFFF') }}`\n📌 Fuso: America/Sao_Paulo (BR)\n\n[INFORMAÇÕES DO DOCUMENTO]\nlead_id: {{ $json.lead_id }}\nnome_cliente: {{ $json.nome_cliente }}\ntipo_documento: {{ $json.tipo_documento }}\nvalor: R$ {{ $json.valor }}\ndata_vencimento: {{ $json.data_vencimento }}\nbeneficiario: {{ $json.beneficiario }}\ncategoria: {{ $json.categoria }}\n\n[HISTÓRICO DE TRANSAÇÕES]\n{{ $json.historico_transacoes }}\n\n## PERSONALIDADE\n- Máx 200 caracteres (exceto análises detalhadas)\n- Tom profissional mas acessível: vc, tá, pra\n- Use nome do cliente naturalmente\n- Formato 24h para horários\n- Sempre confirme valores com PRECISÃO TOTAL\n- Trate dados financeiros com sigilo absoluto\n\n## PRINCÍPIOS FINANCEIROS - ESSENCIAIS\n1. **Precisão absoluta** - zero margem de erro em valores\n2. **Dupla verificação** - sempre confirme dados extraídos\n3. **Categorização imediata** - toda transação tem categoria\n4. **Rastreabilidade** - todo lançamento tem origem documental\n5. **Proatividade** - alertar 7 dias antes de vencimentos\n\n**NUNCA lance valores sem antes validar o documento fonte**\n\n**SEMPRE responda com informações completas, não pela metade**\n\n**Se houver divergência entre documentos, SEMPRE alertar e pedir esclarecimento antes de lançar**\n\n## FORMATOS OBRIGATÓRIOS\n- **Valores**: R$ 0.000,00\n- **Data**: dd/mm/yyyy\n- **Hora**: 24h\n- **Categoria**: [Categoria] > [Subcategoria]\n- **Status**: Pendente | Pago | Recebido | Atrasado | Agendado\n\n## FERRAMENTAS DISPONÍVEIS\n- Validar_Duplicidade: Verifica se transação já existe\n- Categorizar_Automaticamente: Sugere categoria baseado em histórico\n- Calcular_Vencimento: Calcula dias até vencimento\n- Salvar_Lancamento: Grava transação validada\n- Agendar_Alerta: Agenda follow-up para vencimento\n\n## SAÍDA ESPERADA\nJSON estruturado com validações e lançamento pronto",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        1312
+      ],
+      "id": "a89d8986-e12b-48ba-974d-df391b7de2f7",
+      "name": "Assistente Sofia Financeiro",
+      "retryOnFail": false,
+      "maxTries": 5,
+      "waitBetweenTries": 2000,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "meta-llama/llama-4-scout",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        1568
+      ],
+      "id": "efb3ee02-2138-4f3b-870c-937d67adb177",
+      "name": "OpenRouter2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sfkNv3IS1mwYy1mQ",
+          "name": "OpenRouter Alan"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Informações Relevantes - Sofia').item.json.lead_id }}",
+        "tableName": "sofia_historico_analises",
+        "contextWindowLength": 25
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        1536
+      ],
+      "id": "8d5352ef-33ea-4658-a848-ac551a8ab1ac",
+      "name": "Memory",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Resultado da análise: {{ $('Assistente Sofia Financeiro').first().json.output }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Você é um revisor de lançamentos financeiros. Valide se todos os dados obrigatórios estão presentes e retorne JSON:\n\n{\n  \"validado\": true/false,\n  \"erros\": [],\n  \"alertas\": [],\n  \"lancamento_pronto\": true/false\n}\n\nResponda APENAS com o JSON."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        784,
+        1312
+      ],
+      "id": "d6450f62-a554-4c43-b825-984c29368e80",
+      "name": "QA"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lançamento validado: {{ $('QA').first().json.text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Formate como mensagens curtas para enviar ao cliente:\n\n{\n  \"messages\": [\n    \"Mensagem 1\",\n    \"Mensagem 2\"\n  ]\n}\n\nResponda APENAS com o JSON."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1152,
+        1312
+      ],
+      "id": "007394cf-fc1c-4314-b203-cb9277ac445c",
+      "name": "Formatar texto"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "sem-erro-critico",
+              "leftValue": "={{ !$('Formatar texto').first().json.text.includes('erro') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1952,
+        1472
+      ],
+      "id": "845e78f8-467e-42d6-9f62-50a8c925e060",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "notif-messages",
+              "name": "messages",
+              "value": "={{ $('Formatar texto').first().json.text.parseJson().messages }}",
+              "type": "array"
+            },
+            {
+              "id": "lead-id-output",
+              "name": "lead_id",
+              "value": "={{ $('Informações Relevantes - Sofia').first().json.lead_id.toString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        1472
+      ],
+      "id": "d1acc087-477a-4e2c-a075-58b907693cb1",
+      "name": "resposta"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "O6GLUDJqywz2UWy1",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/O6GLUDJqywz2UWy1",
+          "cachedResultName": "[ Kommo ] Split and Delivery Message"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "messages": "={{ $json.messages }}",
+            "lead_id": "={{ $json.lead_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "messages",
+              "displayName": "messages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2624,
+        1552
+      ],
+      "name": "Call SendToKommoSplitted",
+      "id": "35932440-08b4-4b1d-bfad-2d8c447ebf99"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 8-20 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2976,
+        1376
+      ],
+      "id": "26f745d2-a1c5-47ee-a06c-db7b1e5eca95",
+      "name": "Trigger Verificação Diária1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2528,
+        1376
+      ],
+      "id": "d637abad-9fd0-46ee-8f58-220c4f119ea6",
+      "name": "Loop Over Documentos1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condicao-1h",
+              "leftValue": "={{ $now.diffTo($json.ultima_tentativa, 'hour') > 1 || !$json.ultima_tentativa }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2080,
+        1184
+      ],
+      "id": "1ed3a74f-989c-474b-8aeb-9ca47275a396",
+      "name": "If Precisa Processar1"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"messages\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\"messages\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1136,
+        1536
+      ],
+      "id": "fbf9093b-b67d-4a7b-aa52-988143ca2809",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_documentos_financeiros",
+          "mode": "list",
+          "cachedResultName": "sofia_documentos_financeiros"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "lead_id",
+              "value": "={{ $('Informações Relevantes - Sofia').first().json.lead_id.toString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1504,
+        1312
+      ],
+      "id": "1f1f22c8-cd42-4691-ba0a-a94cffca0170",
+      "name": "Ultima Atualizacao",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_historico_analises",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message": "={\n  \"type\": \"ai\",\n  \"content\": \"{{ $('Formatar texto').first().json.text.parseJson().messages.join() }}\"\n}",
+            "session_id": "={{ $('Informações Relevantes - Sofia').item().json.lead_id.toString() }}",
+            "id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2176,
+        1472
+      ],
+      "id": "0b7bc258-8f5d-4c37-9483-1f151955f4dc",
+      "name": "Atualiza status IA1",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Sugere categoria baseado no histórico de transações similares",
+        "operation": "executeQuery",
+        "query": "SELECT categoria, COUNT(*) as frequencia \nFROM \"Assistente Financeiro - Mottivme Sales\".sofia_transacoes \nWHERE beneficiario ILIKE '%' || $1 || '%' \nGROUP BY categoria \nORDER BY frequencia DESC \nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $fromAI('beneficiario', 'Nome do beneficiário', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        192,
+        1536
+      ],
+      "id": "0bfa4821-bd38-4554-90e7-7f8afce252e7",
+      "name": "Categorizar_Automaticamente",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Use para raciocinar sobre validações complexas e análise de dados financeiros"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        1536
+      ],
+      "id": "fcc0099c-dcff-415b-b06f-8e098c78db7c",
+      "name": "Refletir_Validacao"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Agenda alerta de vencimento para data específica",
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_alertas_vencimento",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "data_alerta": "={{ $fromAI('data_alerta', 'Data do alerta em formato YYYY-MM-DD HH:mm:ss', 'string') }}",
+            "lead_id": "={{ $('Informações Relevantes - Sofia').first().json.lead_id.toString() }}",
+            "mensagem": "={{ $fromAI('mensagem', 'Mensagem do alerta', 'string') }}",
+            "id": 0,
+            "documento_id": 0,
+            "transacao_id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "documento_id",
+              "displayName": "documento_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "transacao_id",
+              "displayName": "transacao_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "data_alerta",
+              "displayName": "data_alerta",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensagem",
+              "displayName": "mensagem",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "enviado",
+              "displayName": "enviado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "data_envio",
+              "displayName": "data_envio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        528,
+        1536
+      ],
+      "id": "c10ba216-5187-4588-9772-4ae310094269",
+      "name": "Agendar_Alerta",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Valida se já existe lançamento duplicado no sistema",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_transacoes",
+          "mode": "list"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "valor",
+              "value": "={{ $fromAI('valor', 'Valor da transação', 'number') }}"
+            },
+            {
+              "column": "beneficiario",
+              "value": "={{ $fromAI('beneficiario', 'Nome do beneficiário', 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        704,
+        1536
+      ],
+      "id": "5f51cd67-a85f-4a7b-8c26-f93d4d39dfef",
+      "name": "Validar_Duplicidade",
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "Assistente Financeiro - Mottivme Sales",
+          "mode": "list",
+          "cachedResultName": "Assistente Financeiro - Mottivme Sales"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sofia_documentos_financeiros",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2304,
+        1104
+      ],
+      "id": "67138265-0604-4d5a-96d0-c9135aafb72c",
+      "name": "Última Análise",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM \"Assistente Financeiro - Mottivme Sales\".sofia_documentos_financeiros\nWHERE processado = false\n  AND (ultima_tentativa IS NULL OR ultima_tentativa < NOW() - INTERVAL '1 hour')\n  AND created_at > NOW() - INTERVAL '30 days'\nLIMIT 50;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2752,
+        1376
+      ],
+      "id": "e5194644-676c-40d8-9bb1-98b635fe22e2",
+      "name": "Buscar Docs Pendentes",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "w2mBaRwhZ3tM4FUw",
+          "name": "Postgres Marcos Daniels"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "validacao-ok",
+              "leftValue": "={{ $('Formatar texto').first().json?.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "sem-erros",
+              "leftValue": "={{ $('Ultima Atualizacao').item.json?.processado }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1728,
+        1472
+      ],
+      "id": "be99edc7-2ce1-4869-8977-6bb5b7042988",
+      "name": "If",
+      "executeOnce": false
+    }
+  ],
+  "pinData": {
+    "Trigger Verificação Diária1": [
+      {
+        "json": {
+          "timestamp": "2025-10-15T10:00:00.000-03:00"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Retornar o Lead": {
+      "main": [
+        [
+          {
+            "node": "Formatacao",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Atualiza status IA",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mensagem anteriores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatacao": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Atualiza status IA": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem anteriores": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Execution Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Documentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execution Data": {
+      "main": [
+        [
+          {
+            "node": "Busca Rastreio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Rastreio": {
+      "main": [
+        [
+          {
+            "node": "Informações Relevantes - Sofia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Informações Relevantes - Sofia": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assistente Sofia Financeiro": {
+      "main": [
+        [
+          {
+            "node": "QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Sentiment Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "QA",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Formatar texto",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QA": {
+      "main": [
+        [
+          {
+            "node": "Formatar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar texto": {
+      "main": [
+        [
+          {
+            "node": "Ultima Atualizacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Atualiza status IA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "resposta": {
+      "main": [
+        [
+          {
+            "node": "Call SendToKommoSplitted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SendToKommoSplitted": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Documentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Verificação Diária1": {
+      "main": [
+        [
+          {
+            "node": "Buscar Docs Pendentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Documentos1": {
+      "main": [
+        [
+          {
+            "node": "Fim",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Última Análise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Precisa Processar1": {
+      "main": [
+        [
+          {
+            "node": "Retornar o Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Documentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Formatar texto",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ultima Atualizacao": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualiza status IA1": {
+      "main": [
+        [
+          {
+            "node": "resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorizar_Automaticamente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refletir_Validacao": {
+      "ai_tool": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agendar_Alerta": {
+      "ai_tool": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar_Duplicidade": {
+      "ai_tool": [
+        [
+          {
+            "node": "Assistente Sofia Financeiro",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Última Análise": {
+      "main": [
+        [
+          {
+            "node": "If Precisa Processar1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Docs Pendentes": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Documentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Documentos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8a179ecb-45c8-40e9-aa61-950d64849016",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9d65e6caa0e89e696b77790e020391d74468b15f71b3dcdb63aad81f090f5e69"
+  },
+  "id": "Nssh2p5UVzx97Jq4",
+  "tags": []
+}

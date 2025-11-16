@@ -1,0 +1,2548 @@
+{
+  "name": "Template Contábil de Conciliação de Recibos",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        1104
+      ],
+      "id": "efc12e41-2ac5-4cd5-b0d5-79d931e4f553",
+      "name": "Openrouter",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sfkNv3IS1mwYy1mQ",
+          "name": "OpenRouter Alan"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Pre-processing\nData formatting",
+        "height": 240,
+        "width": 900,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "99fa5fbc-fe1e-4436-9d0f-e8f44344efa7",
+      "name": "Sticky Note5",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Extract key info\nLLM ",
+        "height": 240,
+        "width": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        800
+      ],
+      "id": "bfa9b844-a495-4b89-9db6-a8beb5b3c146",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        544,
+        80
+      ],
+      "id": "8fa69818-a66e-41ab-a29b-f0263d9cf76d",
+      "name": "Extract from File",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and clean the text field\nfor (const item of $input.all()) {\n  // Get the text from input\n  const dirtyText = item.json.text;\n  \n  // Remove all special characters except commas and periods\n  // Also removes newlines, tabs, and multiple spaces\n  const cleanText = dirtyText\n    .replace(/[\\r\\n]+/g, ' ')           // Replace newlines with space\n    .replace(/[^\\w\\s,.]|\\t/g, '')       // Remove everything except words, spaces, commas, periods\n    .replace(/\\s+/g, ' ')               // Replace multiple spaces with single space\n    .trim();                            // Remove leading/trailing spaces\n    \n  // Update the text field with cleaned version\n  item.json.text = cleanText;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        80
+      ],
+      "id": "ab96d484-125a-454e-a31f-8acf54d65494",
+      "name": "FormatText",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"Invoice number\",\n    \"Invoice date\",\n    \"Description\",\n    \"Payment date\",\n    \"Type\",\n    \"Total price\"\n  ],\n  \"properties\": {\n    \"Description\": { \"type\": \"string\" },\n    \"Invoice date\": { \"type\": \"date\" },\n    \"Payment date\": { \"type\": \"date\" },\n    \"Type\": { \n      \"type\": \"string\",\n      \"enum\": [\"Annual Recurring\", \"Monthly Recurring\", \"Single Payment\"]\n    },\n    \"Invoice number\": { \"type\": \"string\" },\n    \"Purchase order number\": { \"type\": \"string\" },\n    \"Supplier name\": { \"type\": \"string\" },\n    \"Supplier address\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"address 1\": { \"type\": \"string\" },\n        \"address 2\": { \"type\": \"string\" },\n        \"city\": { \"type\": \"string\" },\n        \"postcode\": { \"type\": \"string\" }\n      }\n    },\n    \"Supplier VAT identification number\": { \"type\": \"string\" },\n    \"Customer name\": { \"type\": \"string\" },\n    \"Customer address\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"address 1\": { \"type\": \"string\" },\n        \"address 2\": { \"type\": \"string\" },\n        \"city\": { \"type\": \"string\" },\n        \"postcode\": { \"type\": \"string\" }\n      }\n    },\n    \"Customer VAT identification number\": { \"type\": \"string\" }, \n    \"Shipping addresses\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"address 1\": { \"type\": \"string\" },\n          \"address 2\": { \"type\": \"string\" },\n          \"city\": { \"type\": \"string\" },\n          \"postcode\": { \"type\": \"string\" }\n        }\n      }\n    },\n    \"Line items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"name\": \"string\",\n        \"description\": \"string\",\n        \"price\": \"number\",\n        \"discount\": \"number\"\n      }\n    },\n    \"Subtotal without VAT\": { \"type\": \"number\" },\n    \"Subtotal with VAT\": { \"type\": \"number\" },\n    \"Total price\": { \"type\": \"number\" },\n    \"Currency\": { \"type\": \"string\" },\n    \"Additional information\": { \"type\": \"string\" }\n  }\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -768,
+        1072
+      ],
+      "id": "0691721b-ac62-451f-a935-c70a90bf5731",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen/qwen2.5-vl-32b-instruct:free\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"Extract all text from this image\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"{{ $json.data.url }}\"\n          }\n        }\n      ]\n    }\n  ]\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        112,
+        80
+      ],
+      "id": "654b8d85-a1a4-4f60-8d4a-781e240bb8fa",
+      "name": "Qwen2.5VL",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/ocr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"mistral-ocr-latest\",\n  \"document\": {\n    \"type\": \"document_url\",\n    \"document_url\": \"{{ $json.url }}\"\n  },\n  \"include_image_base64\": true\n} ",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "ocr_output.json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -656,
+        1392
+      ],
+      "id": "253aef6a-5c1e-4c38-aaff-650a52345d8d",
+      "name": "Mistral OCR - Document",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HWXR7bwkc8xeWnqx",
+          "name": "Rapidly - marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Attachments\nIf attachments - upload & parse\nIf no attachments - nothing",
+        "height": 253,
+        "width": 423,
+        "color": 7
+      },
+      "id": "a943cf81-d81d-4604-bca2-17153eeb5a1f",
+      "name": "Sticky Note25",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -304,
+        784
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "22f8d83a-b7d1-4b4a-8967-4335c0d1f510",
+              "leftValue": "={{ $('GetSingleEmail').item.binary }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        880
+      ],
+      "id": "fdc4ae54-a67a-423c-a6f0-9de7740eb085",
+      "name": "Attachment"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ \n$('ExtractTextInfo').item.json.output['Invoice date'].toDateTime().format('yyyy.MM.dd')\n+ \" - \"\n+  $('ExtractTextInfo').item.json.output['Supplier name']\n+ ' - ' \n+ $('GetBinaryDataALL').item.json.fileName.split(\".\")[0] \n+ \".\" + $('GetBinaryDataALL').item.json.fileName.split(\".\")[1] + '_EMAILID_' + 'https://mail.google.com/mail/u/3/#all/' + $('GetSingleEmail').item.json.id }}",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "your_own_invoice_folder_ulr",
+            "mode": "url"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        352,
+        832
+      ],
+      "id": "64e260c6-953e-4b8c-bb59-1b34cc978620",
+      "name": "GetAttachments",
+      "notesInFlow": true,
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ufivD8NvmVAh2iOk",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "44944380-9ba0-4cf7-abbb-aba711fb0b9a",
+              "leftValue": "={{ $('GetAttachments').item.json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        832
+      ],
+      "id": "2e9e957b-25c4-4b36-a39e-4d35d3bb9925",
+      "name": "IfExists"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        752,
+        944
+      ],
+      "id": "a5d2b0a4-3340-4a21-a28d-41298369ad7d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "content": "## Uploads Attachments\nIf they don't already exist, only",
+        "height": 485,
+        "width": 883,
+        "color": 7
+      },
+      "id": "bbd16ae3-ff27-4415-8e9d-9e2be5cc47a1",
+      "name": "Sticky Note26",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        720
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "functionCode": "let results = [];\nconst emailData = $('GetSingleEmail').item;\nif (emailData.binary) {\n  for (const key of Object.keys(emailData.binary)) {\n    const attachment = emailData.binary[key];\n    results.push({\n      json: {\n        fileName: attachment.fileName,\n        mimeType: attachment.mimeType\n      },\n      binary: {\n        data: attachment\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "52fb42dd-90e5-45ea-97fb-4a61c6d7a653",
+      "name": "GetBinaryDataALL",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        -16,
+        880
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "data_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1840,
+        880
+      ],
+      "id": "c9d74d6e-dc5c-449c-b6aa-482ae23f22ef",
+      "name": "ReceiveEmail_Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Xr2iq9scV3njUeQl",
+          "name": "Gmail account - Marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=email_subject: {{ $('GetSingleEmail').item.json.subject }}\nemail_body: \n{{ $('GetSingleEmail').item.json.text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Given the following invoice in the <invoice> xml tags, extract the following information as listed below.\nIf you cannot find the information for a specific item, then leave blank and skip to the next. e.g. if the email has no text inside, don't make up the details!\n\n**MOST IMPORTANT THING**\nIf the email body or subject does NOT contain this information, leave it blank. DO NOT MAKE UP INFORMATION.\n\n* Description - short (1-2 line) description of the invoice 'e.g. Monthly database usage for Supabase' - REQUIRED\n* Type - [OPTIONS: Monthly Recurring, Annual Recurring, Single Payment] - REQUIRED\n* Invoice date (date invoice received) - REQUIRED\n* Payment date (date that payment will come out - this is not always the same as the invoice sent date) - REQUIRED\n* Invoice number - REQUIRED\n* Purchase order number\n* Supplier name (make generic if you can't work it out e.g. Restaurant)\n* Supplier VAT identification number\n* Line items, including a description of the goods or services rendered\n* Price with and without VAT (without currency)\n* Total price (without currency) - REQUIRED\n* Currency (USD, Israeli New Shekel, Euro, GBP) - REQUIRED\n* Additional information you deem important that isn't included above \nAdditional important information such as:\n- Payment terms (Net 30, immediate payment, etc.)\n- Payment methods accepted\n- Bank account details if provided\n- Discount terms or early payment incentives\n- Late payment penalties or interest rates\n- Tax exemption references\n- Contract or framework agreement references\n- Delivery terms\n- Special instructions\n- Contact information for billing inquiries\n- Return/refund policies\n- Warranty information if applicable\n- Certificate of origin if present\n- Insurance requirements\n- Customs information for international shipments"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -864,
+        880
+      ],
+      "id": "770c92b7-68a2-45b4-a506-23f41cd8a40e",
+      "name": "ExtractTextInfo"
+    },
+    {
+      "parameters": {
+        "content": "## Assess Email\nIf financial based on subject and content",
+        "height": 240,
+        "width": 360,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1456,
+        800
+      ],
+      "id": "5aa81e23-71b6-4a0b-ade2-80ec9f002fa9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"requires_processing\": {\n\t\t\t\"type\": \"boolean\"\n\t\t}\n\t}\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -1328,
+        1072
+      ],
+      "id": "059710aa-f726-4363-8123-ab2af0c20adc",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=email_subject: {{ $('GetSingleEmail').item.json.subject }}\nemail_body: \n{{ $('GetSingleEmail').item.json.text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Role\nYou are an Email Processing Filter Agent specialized in identifying emails that contain invoices or billing-related content requiring financial processing. Your purpose is to quickly and accurately determine whether an incoming email needs to be routed to invoice processing systems.\nConstraints\n\nMust return only 'true' or 'false' as output\nProcess both email subject line and body content\nFocus specifically on invoice and billing-related content\nMaintain high accuracy to prevent missed invoices or false positives\nHandle various email formats and languages commonly used in business correspondence\nConsider both direct invoices and invoice-related communications\nProcess emails quickly without requiring additional user input\n\nInputs\n\nemail_subject: The subject line of the email (string, required)\nemail_body: The full text content of the email body (string, required)\n\nInstructions\n\nSubject Line Analysis:\n\nScan for invoice-related keywords (invoice, bill, payment, statement, receipt, etc.)\nCheck for supplier/vendor names combined with financial terms\nLook for invoice numbers, amounts, or payment references\n\n\nEmail Body Analysis:\n\nIdentify invoice-specific information such as:\n\nInvoice numbers or reference numbers\nPayment amounts and currency symbols\nPayment due dates or terms\nSupplier/vendor details and VAT numbers\nLine items or service descriptions\nPayment instructions or bank details\n\n\nCheck for attachments mentioned that might contain invoices (PDF, Excel files)\nLook for automated billing system signatures or footers\n\n\nContent Evaluation:\n\nDetermine if the email contains sufficient invoice-related elements\nThings like 'business lunch' or 'christmas do' justify that it is probably expense related\nConsider context clues that indicate billing/financial processing requirements\nEvaluate whether the email requires extraction of financial data\n\n\nDecision Making:\n\nReturn 'true' if the email contains invoice or billing content requiring processing\nReturn 'false' if the email does not contain relevant financial/invoice information\nWhen in doubt about borderline cases, err on the side of including (return 'true')\n\n\n\nConclusions\n\nOutput Format: Single string value - either 'true' or 'false'\nProcessing Speed: Quick analysis suitable for high-volume email filtering\nAccuracy Focus: Minimize false negatives (missed invoices) while maintaining reasonable precision\n\nSolutions\n\nIf email content is corrupted or unreadable, return 'false'\nIf email is in a foreign language but contains recognizable invoice elements (numbers, currency symbols, dates), return 'true'\nIf email mentions invoice-related topics but lacks concrete financial data, return 'false'\nIf technical processing errors occur, default to 'false' to prevent system overload\nFor emails with mixed content where only portions relate to invoicing, focus on the primary purpose and content volume"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -1424,
+        880
+      ],
+      "id": "fd22f792-b122-4070-96e9-12d439fcc9c7",
+      "name": "AssessEmail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8beed4e9-f243-4103-8e66-d006c01e4c1f",
+              "leftValue": "={{ $json.output.requires_processing }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -1056,
+        880
+      ],
+      "id": "e5280780-5935-46cb-88c8-26ec70031cf2",
+      "name": "Process?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1648,
+        880
+      ],
+      "id": "8f276bc1-63ff-4e9d-ba61-62978267f80d",
+      "name": "GetSingleEmail",
+      "webhookId": "2b5662a4-e126-4f20-96c2-78354946586b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Xr2iq9scV3njUeQl",
+          "name": "Gmail account - Marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 3,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "your_own_bank_transactions_sheet_url",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1840,
+        464
+      ],
+      "id": "7db4addd-cb4d-4048-b284-5b75492f0b4d",
+      "name": "Google Sheets Trigger",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## 1. Fetch raw transaction\nFetches transactions from your live transactions and populates them in a copy of [this GSheet](https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit?usp=sharing) \n",
+        "height": 276,
+        "width": 460,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1904,
+        368
+      ],
+      "id": "2ca4fd0a-8a9a-43ac-b3f9-a4982717d830",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4",
+          "mode": "list",
+          "cachedResultName": "Finance Reconciliation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Raw_LIVE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Transaction ID": "={{ $json[\"Transaction ID\"] }}",
+            "Date": "={{ $json.Date }}",
+            "Category split": "={{ $json[\"Category split\"] }}",
+            "Description": "={{ $json.Description }}",
+            "Receipt": "={{ $json.Receipt }}",
+            "Address": "={{ $json.Address }}",
+            "Notes and #tags": "={{ $json[\"Notes and #tags\"] }}",
+            "Local currency": "={{ $json[\"Local currency\"] }}",
+            "Local amount": "={{ $json[\"Local amount\"] }}",
+            "Currency": "={{ $json.Currency }}",
+            "Amount": "={{ $json.Amount }}",
+            "Category": "={{ $json.Category }}",
+            "Emoji": "={{ $json.Emoji }}",
+            "Name": "={{ $json.Name }}",
+            "Type": "={{ $json.Type }}",
+            "Time": "={{ $json.Time }}"
+          },
+          "matchingColumns": [
+            "Transaction ID"
+          ],
+          "schema": [
+            {
+              "id": "Year",
+              "displayName": "Year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Month name",
+              "displayName": "Month name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Transaction ID",
+              "displayName": "Transaction ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emoji",
+              "displayName": "Emoji",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Local amount",
+              "displayName": "Local amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Local currency",
+              "displayName": "Local currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes and #tags",
+              "displayName": "Notes and #tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt",
+              "displayName": "Receipt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category split",
+              "displayName": "Category split",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt_GDrive",
+              "displayName": "Receipt_GDrive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "File name",
+              "displayName": "File name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Extracted Text",
+              "displayName": "Extracted Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Download",
+              "displayName": "Download",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "change_type",
+              "displayName": "change_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "P&L Category",
+              "displayName": "P&L Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -1600,
+        464
+      ],
+      "id": "cb103ced-20c5-4b82-a564-4f2c8cc31dde",
+      "name": "AppendandUpdateRows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5QhviLaOuXKNGx5h",
+          "name": "Mentorfy Google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 2. Receive email accounts@\nRetrieves every email\n",
+        "height": 260,
+        "width": 380,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1904,
+        800
+      ],
+      "id": "d6986a8d-39d2-4dd7-aa0d-6e835474d48d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Text-based info\n",
+        "height": 320,
+        "width": 520,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        752
+      ],
+      "id": "fc7e2f16-9b8b-42b8-88b6-1cf7798a9185",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Attachment info\n",
+        "height": 380,
+        "width": 520,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        752
+      ],
+      "id": "97e3cfd5-9a54-4366-aa29-aa2cb0c8e324",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "name": "={{ \n($('ExtractTextInfo').item.json.output['Invoice date'] ? \n  ($('ExtractTextInfo').item.json.output['Invoice date'].toString().length > 0 ? \n    $('ExtractTextInfo').item.json.output['Invoice date'].toDateTime().format('yyyy.MM.dd') : \n    $now.format('yyyy.MM.dd')) : \n  $now.format('yyyy.MM.dd'))\n+ \" - \"\n+  $('ExtractTextInfo').item.json.output['Supplier name']\n+ ' - ' \n+ $('GetBinaryDataALL').item.json.fileName.split(\".\")[0] \n+ \".\" + $('GetBinaryDataALL').item.json.fileName.split(\".\")[1] + '_EMAILID_' + 'https://mail.google.com/mail/u/3/#all/' + $('GetSingleEmail').item.json.id }}\n",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        944,
+        944
+      ],
+      "id": "024ae65b-34b4-42b1-99b2-eee41bc17861",
+      "name": "SaveAttachments",
+      "notesInFlow": true,
+      "retryOnFail": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ufivD8NvmVAh2iOk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 3. New Receipt\n",
+        "height": 260,
+        "width": 440,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1776,
+        1312
+      ],
+      "id": "925fb4e9-22c6-4b17-adc4-c4a8354e027f",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1504,
+        1392
+      ],
+      "id": "62d76c79-744c-4e9c-988e-6ea46eec61fd",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ufivD8NvmVAh2iOk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "your_own_invoice_folder_url",
+          "mode": "url"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        1392
+      ],
+      "id": "b420ec3b-69ea-40ce-acd6-0a9ba6c63fb4",
+      "name": "GDrive_Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ufivD8NvmVAh2iOk",
+          "name": "Google Drive account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Extract info from file\n",
+        "height": 260,
+        "width": 940,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1168,
+        1312
+      ],
+      "id": "3cffd36b-7ec3-46f4-ab6c-8e613768866c",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mistral.ai/v1/files/{{ $json.id }}/url ",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "expiry",
+              "value": "24"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        1392
+      ],
+      "id": "8fa06150-6643-4b8b-8371-a9c09296f806",
+      "name": "Get Signed Url",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HWXR7bwkc8xeWnqx",
+          "name": "Rapidly - marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/files",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "purpose",
+              "value": "ocr"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1104,
+        1392
+      ],
+      "id": "b7183cfa-2505-4f70-a137-63158a2a98a5",
+      "name": "Mistral - Upload File",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HWXR7bwkc8xeWnqx",
+          "name": "Rapidly - marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4",
+          "mode": "list",
+          "cachedResultName": "Finance Reconciliation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Raw_LIVE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        240,
+        1392
+      ],
+      "id": "4b40b57a-b0fc-403e-aa7f-9221aad442af",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5QhviLaOuXKNGx5h",
+          "name": "Mentorfy Google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "binaryPropertyName": "ocr_output.json",
+        "destinationKey": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        1392
+      ],
+      "id": "73a88859-c2bb-41a5-bd7a-e269079681ee",
+      "name": "Extract from JSON"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        1584
+      ],
+      "id": "a04a10fa-1e49-4a0b-af5a-ecab06bb6e1d",
+      "name": "Openrouter1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sfkNv3IS1mwYy1mQ",
+          "name": "OpenRouter Alan"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"amount_due\": {\n\t\t\t\"type\": \"number\"\n\t\t}\n\t}\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        1584
+      ],
+      "id": "d501f9c3-ff7a-4a56-bb54-dff451b42da1",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=invoice_markdown:\n{{ $json.text?.pages[0].markdown || JSON.stringify($('Attachment').item.json.output,null,2) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Role\nYou are an Invoice Amount Extraction Agent specialized in identifying and extracting the total amount due from invoice markdown content. Your purpose is to locate the exact local amount due and return it as a clean numeric value.\nConstraints\n\nMust return only the numeric amount with no currency symbols or formatting\nExtract specifically the \"Amount due\" or equivalent total from the invoice\nUse local currency amount (the primary currency shown on the invoice)\nDo not guess or estimate - only extract clearly stated amounts\nHandle various invoice formats and layouts\nReturn only the number with decimal places (e.g., 2028.80)\n\nInputs\n\ninvoice_markdown: The markdown-formatted text content of an invoice (string, required)\n\nInstructions\n\nLocate Amount Due Section:\n\nSearch for \"Amount due\", \"Total due\", \"Total\", or similar final amount indicators\nLook in table structures, summary sections, or highlighted areas\nIdentify the final payable amount (not subtotals or line items)\n\n\nExtract Numeric Value:\n\nRemove all currency symbols (US$, $, €, £, etc.)\nRemove all formatting characters (commas, spaces)\nPreserve decimal points and decimal places\nExtract only the numerical value\n\n\nValidation:\n\nEnsure the extracted amount matches the context of \"amount due\"\nVerify it's the total/final amount, not a line item or subtotal\nConfirm the value is in the local currency of the invoice\n\n\nOutput Formatting:\n\nReturn as plain number with decimal places\nNo currency symbols, commas, or other formatting\nExample format: 2028.80\n\n\n\nConclusions\n\nOutput Format: Plain numeric value with decimals (e.g., 2028.80)\nPrecision: Extract exact amount with no rounding or estimation\nReliability: Only return values that are clearly identifiable as the total amount due\n\nSolutions\n\nIf multiple \"Total\" amounts exist, prioritize \"Amount due\" over other totals\nIf no clear amount due is found, return empty/null rather than guessing\nIf currency conversion is shown, use the local/primary currency amount\nIf the markdown is malformed but amount is readable, extract the clear numeric value\nIf technical parsing errors occur, return null rather than incorrect data"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -96,
+        1392
+      ],
+      "id": "abcfb990-141b-4922-b0bd-a5b75b161c0e",
+      "name": "AmountDue"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        1584
+      ],
+      "id": "b092aeab-e8a0-4d6b-9dcb-74822adda1a8",
+      "name": "Openrouter2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sfkNv3IS1mwYy1mQ",
+          "name": "OpenRouter Alan"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"is_match\": {\n\t\t\t\"type\": \"boolean\"\n\t\t}\n\t}\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        1584
+      ],
+      "id": "1aba2979-90bd-4fba-b7a5-c3b1826d3935",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1008,
+        1392
+      ],
+      "id": "f1e9d9b9-9772-4bdd-b23b-f290d7b5b0fd",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=transaction_data: \n{{ JSON.stringify($json, null, 2) }}\ninvoice_markdown: \n{{ $('GDrive_Trigger').isExecuted ? $('Extract from JSON').item.json.text?.pages[0].markdown : JSON.stringify($('Attachment').item.json.output,null,2) }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Role\nYou are a Transaction Matching Agent specialized in comparing invoice data with existing transaction records to determine if they represent the same financial transaction. Your purpose is to accurately identify matches between invoices and bank/payment transactions.\nConstraints\n\nMust return only 'true' or 'false' as output\nCompare invoice details with transaction record data\nFocus on key matching criteria: amount, date proximity, and contextual information\nHandle currency differences and date format variations\nMaintain high accuracy to prevent incorrect matches\nDo not guess - require reasonable confidence for positive matches\n\nInputs\n\ntransaction_data: Array containing transaction record with fields like Amount, Local amount, Date, Description, Currency, etc. (array, required)\ninvoice_markdown: The markdown-formatted text content of an invoice (string, required)\n\nInstructions\n\nExtract Invoice Key Data:\n\nParse invoice amount due and currency\nExtract invoice date (issue date or due date)\nIdentify supplier/vendor name or service description\nNote any reference numbers or transaction identifiers\n\n\nCompare Financial Amounts:\n\nMatch invoice amount with transaction \"Amount\" or \"Local amount\" fields\nAccount for currency differences (invoice currency vs transaction currency)\nAllow for minor rounding differences due to exchange rates\nConsider both positive invoice amounts and negative transaction amounts\n\n\nEvaluate Date Proximity (IMPORTANT):\n- Make sure to be certain that dates are similar (transactions often get charged monthly for the same amount so I want to make sure you're allocating the invoice to the correct transaction)\n- Double check the invoice date to check it's in close proximity to the transaction (e.g. invoice is for 1-30th June 2025, transaction is processed on 1st July 2025 -> likely to be a match, invoice is for 1-30th June 2025, transaction is processed on 1st June 2025 -> unlikely to be a match)\n- Compare invoice date with transaction date\n- Allow reasonable time window (typically within days)\n- Account for different date formats\n\n\nAssess Contextual Match:\n\nCompare supplier names with transaction \"Name\" or \"Description\" fields\nLook for matching service descriptions or reference numbers\nEvaluate transaction type relevance (e.g., \"international-payments\")\nConsider any notes or additional identifiers\n\n\nMake Match Determination:\n\nReturn 'true' only if multiple criteria align with reasonable confidence\nReturn 'false' if key details don't match or are inconsistent\nPrioritize amount and date accuracy over descriptive matches\n\n<Example of recurring payment>\nTransaction data (example):\n{\n  \"row_number\": 467,\n  \"Year\": 2025,\n  \"Month name\": \"May\",\n  \"Transaction ID\": \"tx_0000AvgnxwbY8ViKClZeXF\",\n  \"Date\": \"01/05/2025\",\n  \"Time\": \"12:30:17\",\n  \"Type\": \"Card payment\",\n  \"Name\": \"Google Workspace\",\n  \"Emoji\": \"📅\",\n  \"Category\": \"Services\",\n  \"Amount\": -11.8,\n  \"Currency\": \"GBP\",\n  \"Local amount\": -11.8,\n  \"Local currency\": \"GBP\",\n  \"Notes and #tags\": \"\",\n  \"Address\": \"\",\n  \"Receipt\": \"\",\n  \"Description\": \"Google GSUITE_scrapes. Dublin        IRL\",\n  \"Category split\": \"\",\n}\n\nInvoice markdown example:\n# Google\n\nInvoice number: 5295322548\n\n**Google Cloud EMEA Limited**\n\nVelasco Clanwilliam Place Dublin 2 Ireland VAT number: IE3668997OH\n\nBill to Simon Coton scrapes.ai 50 Hampton Park First Floor Flat BRISTOL BS6 6LJ United Kingdom\n\n|  Details | Google Workspace  |\n| --- | --- |\n|  Invoice number | 5295322548  |\n|  Invoice date | 30 Jun 2025  |\n|  Billing ID | 4844-1438-8906  |\n|  Domain name | scrapes.ai  |\n\n|  Total in GBP | £11.80  |\n| --- | --- |\n|  |   |\n\nSummary for 1 Jun 2025 - 30 Jun 2025\n\n|  Subtotal in GBP | £11.80  |\n| --- | --- |\n|  VAT (0%) | £0.00  |\n|  Total in GBP | £11.80  |\n\nYou will be automatically charged for any amount due.\n\nDecision example: \n1. Found a match in terms of potential cost\n2. Found a match in terms of the same supplier \n3. However, the 'date' in the transaction (01/05/2025) clearly does not align with the Invoice Markdown (July 2025) \n4. Return false\n\n\nConclusions\n\nOutput Format: Single string value - either 'true' or 'false'\nMatch Confidence: Require reasonable alignment of amount, timing, and context\nError Prevention: Favor false negatives over false positives to prevent incorrect matches\n\nSolutions\n\nIf transaction array is empty, return 'false'\nIf invoice data is incomplete or unclear, return 'false'\nIf amounts are close but not exact, consider exchange rate fluctuations and return 'true' if within reasonable variance\nIf dates are formatted differently, parse and compare the underlying dates\nIf technical parsing errors occur, return 'false' to prevent incorrect matches\nFor ambiguous cases where confidence is low, return 'false'"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1280,
+        1392
+      ],
+      "id": "553b5078-6797-49bc-b166-9152947a8997",
+      "name": "MatchTransaction"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4",
+          "mode": "list",
+          "cachedResultName": "Finance Reconciliation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Raw_LIVE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Transaction ID": "={{ $('Get row(s) in sheet').item.json['Transaction ID'] }}",
+            "Extracted Text": "={{ $('GDrive_Trigger').isExecuted ? $('Extract from JSON').item.json?.text.pages[0].markdown : JSON.stringify($('Attachment').item.json.output,null,2) }}",
+            "File name": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json.name : \"N/A\" }}",
+            "Download": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json?.webContentLink : \"N/A\" }}",
+            "Email": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json?.name?.split('_EMAILID_')[1] : 'https://mail.google.com/mail/u/3/#all/' + $('GetSingleEmail').item.json?.id }}",
+            "Receipt_GDrive": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json?.webViewLink : \"Email\" }}"
+          },
+          "matchingColumns": [
+            "Transaction ID"
+          ],
+          "schema": [
+            {
+              "id": "Year",
+              "displayName": "Year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Month name",
+              "displayName": "Month name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Transaction ID",
+              "displayName": "Transaction ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Emoji",
+              "displayName": "Emoji",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Local amount",
+              "displayName": "Local amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Local currency",
+              "displayName": "Local currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Notes and #tags",
+              "displayName": "Notes and #tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Receipt",
+              "displayName": "Receipt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Category split",
+              "displayName": "Category split",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt_GDrive",
+              "displayName": "Receipt_GDrive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "File name",
+              "displayName": "File name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Extracted Text",
+              "displayName": "Extracted Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Download",
+              "displayName": "Download",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "change_type",
+              "displayName": "change_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1904,
+        1392
+      ],
+      "id": "ca496ee2-5ff3-4b93-9b00-7bb7304180eb",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5QhviLaOuXKNGx5h",
+          "name": "Mentorfy Google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3e241571-d526-4e92-b0fb-67f3f49bb489",
+              "leftValue": "={{ $json.output.is_match }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        1392
+      ],
+      "id": "02205ac7-a8aa-4477-a3df-592e4caaaf97",
+      "name": "isMatch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4",
+          "mode": "list",
+          "cachedResultName": "Finance Reconciliation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2050252644,
+          "mode": "list",
+          "cachedResultName": "Unmatched_Receipts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit#gid=2050252644"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json?.name?.split('_EMAILID_')[1] : 'https://mail.google.com/mail/u/3/#all/' + $('GetSingleEmail').item.json?.id }}",
+            "Date of invoice": "TBC",
+            "File name": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json.name : \"N/A\" }}",
+            "Extracted Text": "={{ $('GDrive_Trigger').isExecuted ? $('Extract from JSON').item.json?.text.pages[0].markdown : JSON.stringify($('Attachment').item.json.output,null,2) }}",
+            "Download": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json?.webContentLink : \"N/A\" }}",
+            "Total Due": "={{ $('AmountDue').item.json.output.amount_due }}",
+            "Receipt_GDrive": "={{ $('GDrive_Trigger').isExecuted ? $('GDrive_Trigger').item.json?.webViewLink : \"N/A\" }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date of invoice",
+              "displayName": "Date of invoice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt_GDrive",
+              "displayName": "Receipt_GDrive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "File name",
+              "displayName": "File name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Extracted Text",
+              "displayName": "Extracted Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Download",
+              "displayName": "Download",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total Due",
+              "displayName": "Total Due",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1824,
+        1104
+      ],
+      "id": "0f624cf9-95f9-4bed-a657-adabc2cb0e10",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5QhviLaOuXKNGx5h",
+          "name": "Mentorfy Google"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Extract amount due to find corresponding bank transaction\n",
+        "height": 260,
+        "width": 1912,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        1312
+      ],
+      "id": "c0396ba9-e56a-4ad5-8a51-656661e150d7",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.awsTextract",
+      "typeVersion": 1,
+      "position": [
+        320,
+        80
+      ],
+      "id": "b112d1ae-bb60-422d-a0d3-23073e91930e",
+      "name": "AWS Textract",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Append as unmatched\nIf no matches are found, only",
+        "height": 260,
+        "width": 320,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        1008
+      ],
+      "id": "986687e2-d40f-4e81-bd8f-230b56c4e0c8",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "Date",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        464,
+        1392
+      ],
+      "id": "26be3149-c186-4b6d-835a-3d60837f5019",
+      "name": "NewestFirst"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/ocr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"mistral-ocr-latest\",\n  \"document\": {\n    \"type\": \"image_url\",\n    \"image_url\": \"{{ $json.url }}\"\n  },\n  \"include_image_base64\": true,\n  \"bbox_annotation_format\": {\n    \"type\": \"json_schema\",\n    \"json_schema\": {\n      \"schema\": {\n        \"type\": \"object\",\n        \"title\": \"BBOXAnnotation\",\n        \"properties\": {\n          \"document_type\": {\n            \"title\": \"Document_Type\",\n            \"description\": \"The type of the image.\",\n            \"type\": \"string\"\n          },\n          \"short_description\": {\n            \"title\": \"Short_Description\",\n            \"description\": \"A description in English describing the image.\",\n            \"type\": \"string\"\n          },\n          \"summary\": {\n            \"title\": \"Summary\",\n            \"description\": \"Summarize the image.\",\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"document_type\", \"short_description\", \"summary\"],\n        \"additionalProperties\": false\n      },\n      \"name\": \"bbox_annotation\",\n      \"strict\": true\n    }\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "ocr_output.json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -656,
+        1664
+      ],
+      "id": "0cad26ae-b1ce-4eef-b025-95fe9acd7bf9",
+      "name": "Mistral OCR - Image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HWXR7bwkc8xeWnqx",
+          "name": "Rapidly - marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/files",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "purpose",
+              "value": "ocr"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1104,
+        1664
+      ],
+      "id": "e800576c-7660-43ce-88d8-84dd5f5a3134",
+      "name": "Mistral - Upload File1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HWXR7bwkc8xeWnqx",
+          "name": "Rapidly - marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mistral.ai/v1/files/{{ $json.id }}/url ",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "expiry",
+              "value": "24"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        1664
+      ],
+      "id": "c8cdd03f-9770-48a7-be24-6255fcef101f",
+      "name": "Get Signed Url1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HWXR7bwkc8xeWnqx",
+          "name": "Rapidly - marcos"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3ccf10e1-7d8d-418d-adf4-b27eadc50173",
+              "leftValue": "={{ $binary.data.mimeType }}",
+              "rightValue": "=image",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1344,
+        1392
+      ],
+      "id": "16868e6d-c678-49ca-b9a5-d1fb735cae3b",
+      "name": "IfImage"
+    },
+    {
+      "parameters": {
+        "content": "## Extract info from image\n",
+        "height": 260,
+        "width": 940,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1168,
+        1584
+      ],
+      "id": "a7f98dfb-2058-4636-930e-3dcf8144669a",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Setup instructions - [video and assets here](https://www.skool.com/scrapes/classroom/5cb99289?md=3c467e09169a485e8b4d2d5e04d3962f)\n\n**All orange notes signify that changes need to be made before the template will work for you e.g. by connecting up your account. All instructions step-by-step are below.**\n\n### Fetch live transactions from bank\nThis part of the automation is going to be unique to your bank. You'll need your transactions to be imported to a Google sheet, either live transactions (preferable) or a manual export each month.\n1. Set up your business / personal banking to automatically export live transactions to a GSheet, or use a third party app to do so.\n2. Make a copy of this [Google Sheet](https://docs.google.com/spreadsheets/d/1DYHQ7EZ-cDBJZ5SCC2brmXASXcZCqhtYtxUW-mGw4G4/edit?usp=sharing) which stores `Raw_LIVE` transactions, some `lookups` e.g. category matching information, and will store our `unmatched receipts` for any non-matching items to make it simpler to reconcile later\n\n### Set up your receipt monitoring email e.g. accounts@companyname.com and Invoice folder\nHaving a specific email address to receive the receipts and invoices is going to make this process significantly simpler\n1. Set up the credentials for your Gmail, if this is your first time, follow [this guide](https://www.skool.com/scrapes/classroom/5cb99289?md=f58e8fbe14ad460bb0c1b4a30c420a96) - (_Optional - You can swap out Gmail for Outlook or another email provider)_\n2. Set up a folder in GDrive (recommended) or another service to receive all invoice uploads for record-keeping\n3. Connect all GSheets in the orange boxes to your own sheet credentials, and to the sheet you copied at the start.\n4. Set up [Mistral OCR](https://mistral.ai/pricing) ($1 per 1000 pages) or another OCR provider for the image recognition (when an invoice is an image, not a PDF). Here's a [comparison video](https://youtu.be/1v9859y-gGg?si=X55k1PiG5LG9Tq4U).\n5. Grab your Mistral API key and set up a Generic Credential - Header Auth in the HTTP request nodes. \nName: `Authorization`. Value: `your_api_key`.\n6. Set up Openrouter (for the AI functionality) - [guide here](https://www.skool.com/scrapes/classroom/5cb99289?md=2597191838bd4524873b8f77b27ebee4) or swap out for another AI Model Provider e.g. OpenAI\n7. Activate the workflow\n8. Enjoy the time you get back from not manually reconciling invoices!\n\n\nExtensions:\nThe next step for this template is integrating it directly with accounting software e.g. FreeAgent, Quickbooks, Xero",
+        "height": 672,
+        "width": 960,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2896,
+        368
+      ],
+      "id": "b43ac1f2-7b4c-41b5-a85a-26472c5e0af0",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "**Update**",
+        "height": 192,
+        "width": 192,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        1360
+      ],
+      "id": "39cc5bfd-7f72-4531-83bf-072a550ea047",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "**Get account using Mistral OCR**",
+        "height": 192,
+        "width": 656,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        1360
+      ],
+      "id": "a13b16d2-00a8-411b-9093-54eed70aa2be",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "**Get account using Mistral OCR**",
+        "height": 192,
+        "width": 656,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        1632
+      ],
+      "id": "9705817a-af27-4af6-bce7-a7588fdcc035",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "**Update**",
+        "height": 192,
+        "width": 192,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        1360
+      ],
+      "id": "29921d8c-a721-446a-9c6c-2fbae28b81ad",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "content": "**Update**",
+        "height": 176,
+        "width": 176,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        896,
+        896
+      ],
+      "id": "8780d62d-1b40-4794-9c9c-1c6f85097de3",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "**Update**",
+        "height": 176,
+        "width": 176,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        320,
+        800
+      ],
+      "id": "1794806c-edf1-4175-be37-48c6b28cbed9",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "## Demo\n1. Matching to the correct transaction (from multiple similar)\n2. How it handles images using Optical Character Recognition, and PDFs\n3. How it handles receipts with no matching transaction",
+        "height": 144,
+        "width": 656,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1904,
+        96
+      ],
+      "id": "8ef788f2-87a2-4b16-acb1-0343269d8569",
+      "name": "Sticky Note19"
+    },
+    {
+      "parameters": {
+        "content": "**Update**",
+        "height": 176,
+        "width": 176,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1760,
+        1360
+      ],
+      "id": "e2fb68d2-0634-491d-9448-374ca1e880eb",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "maxItems": 15
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        688,
+        1392
+      ],
+      "id": "3ceb2d18-faf5-405f-a8fc-27c76fa10447",
+      "name": "Limit15"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Openrouter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ExtractTextInfo",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AssessEmail",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "FormatText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "ExtractTextInfo",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attachment": {
+      "main": [
+        [
+          {
+            "node": "GetBinaryDataALL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AmountDue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetAttachments": {
+      "main": [
+        [
+          {
+            "node": "IfExists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IfExists": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "SaveAttachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetBinaryDataALL": {
+      "main": [
+        [
+          {
+            "node": "GetAttachments",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "ReceiveEmail_Trigger": {
+      "main": [
+        [
+          {
+            "node": "GetSingleEmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractTextInfo": {
+      "main": [
+        [
+          {
+            "node": "Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AssessEmail",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AssessEmail": {
+      "main": [
+        [
+          {
+            "node": "Process?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process?": {
+      "main": [
+        [
+          {
+            "node": "ExtractTextInfo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetSingleEmail": {
+      "main": [
+        [
+          {
+            "node": "AssessEmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "AppendandUpdateRows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GDrive_Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "IfImage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Signed Url": {
+      "main": [
+        [
+          {
+            "node": "Mistral OCR - Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral - Upload File": {
+      "main": [
+        [
+          {
+            "node": "Get Signed Url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral OCR - Document": {
+      "main": [
+        [
+          {
+            "node": "Extract from JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from JSON": {
+      "main": [
+        [
+          {
+            "node": "AmountDue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Openrouter1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AmountDue",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AmountDue",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AmountDue": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Openrouter2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "MatchTransaction",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "MatchTransaction",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "NewestFirst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MatchTransaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MatchTransaction": {
+      "main": [
+        [
+          {
+            "node": "isMatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "isMatch": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NewestFirst": {
+      "main": [
+        [
+          {
+            "node": "Limit15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral - Upload File1": {
+      "main": [
+        [
+          {
+            "node": "Get Signed Url1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Signed Url1": {
+      "main": [
+        [
+          {
+            "node": "Mistral OCR - Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IfImage": {
+      "main": [
+        [
+          {
+            "node": "Mistral - Upload File1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mistral - Upload File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral OCR - Image": {
+      "main": [
+        [
+          {
+            "node": "Extract from JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit15": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4389e764-a47c-4068-9a0d-8293b92ce739",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9d65e6caa0e89e696b77790e020391d74468b15f71b3dcdb63aad81f090f5e69"
+  },
+  "id": "2z2hLgjCZ93ARf2y",
+  "tags": [
+    {
+      "updatedAt": "2025-10-24T13:11:20.326Z",
+      "createdAt": "2025-10-24T13:11:20.326Z",
+      "id": "qBm2IlQiSgmAQkaR",
+      "name": "AI agent"
+    }
+  ]
+}
