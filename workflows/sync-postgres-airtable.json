@@ -1,0 +1,764 @@
+{
+  "name": "🔄 Sync PostgreSQL ↔ Airtable - Luna Financeiro",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Workflow de Sincronização Bidirecional\n\n**PostgreSQL ↔ Airtable**\n\n### Fluxos:\n1. PostgreSQL → Airtable (INSERT/UPDATE)\n2. Airtable → PostgreSQL (mudanças manuais)\n3. Sincronização Full (diária)\n\n### Importante:\n- PostgreSQL é sempre a fonte da verdade\n- Em conflito, PostgreSQL vence\n- Log completo de todas sincronizações",
+        "height": 400,
+        "width": 600,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        200
+      ],
+      "id": "note-intro",
+      "name": "📝 Nota"
+    },
+    {
+      "parameters": {
+        "path": "postgres-to-airtable",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ],
+      "id": "webhook-postgres",
+      "name": "🔔 Webhook PostgreSQL",
+      "webhookId": "postgres-sync"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM luna_financeiro.documentos WHERE id = '{{ $json.body.record_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        200,
+        400
+      ],
+      "id": "pg-get-record",
+      "name": "📥 Buscar Registro PostgreSQL",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "has-airtable-id",
+              "leftValue": "={{ $json.airtable_record_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ],
+      "id": "check-exists-airtable",
+      "name": "🔍 Existe no Airtable?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": "{{AIRTABLE_BASE_ID}}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Documentos"
+        },
+        "id": "={{ $json.airtable_record_id }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "values": {
+            "ID PostgreSQL": "={{ $json.id }}",
+            "Tipo": "={{ $json.tipo }}",
+            "Status": "={{ $json.status }}",
+            "Nº Documento": "={{ $json.numero_documento }}",
+            "Nº NF": "={{ $json.numero_nf }}",
+            "Data Emissão": "={{ $json.data_emissao }}",
+            "Data Vencimento": "={{ $json.data_vencimento }}",
+            "Data Pagamento": "={{ $json.data_pagamento }}",
+            "Valor Bruto": "={{ $json.valor_bruto }}",
+            "Desconto": "={{ $json.valor_desconto }}",
+            "Juros": "={{ $json.valor_juros }}",
+            "Multa": "={{ $json.valor_multa }}",
+            "Descrição": "={{ $json.descricao }}",
+            "Observações": "={{ $json.observacoes }}",
+            "Forma Pagamento": "={{ $json.forma_pagamento }}",
+            "Conciliado": "={{ $json.conciliado }}",
+            "Aprovado Por": "={{ $json.aprovado_por }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        300
+      ],
+      "id": "airtable-update",
+      "name": "✏️ Atualizar Airtable",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "{{AIRTABLE_CREDENTIAL_ID}}",
+          "name": "Airtable Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": "{{AIRTABLE_BASE_ID}}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Documentos"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "values": {
+            "ID PostgreSQL": "={{ $json.id }}",
+            "Tipo": "={{ $json.tipo }}",
+            "Status": "={{ $json.status }}",
+            "Nº Documento": "={{ $json.numero_documento }}",
+            "Nº NF": "={{ $json.numero_nf }}",
+            "Data Emissão": "={{ $json.data_emissao }}",
+            "Data Vencimento": "={{ $json.data_vencimento }}",
+            "Data Pagamento": "={{ $json.data_pagamento }}",
+            "Valor Bruto": "={{ $json.valor_bruto }}",
+            "Desconto": "={{ $json.valor_desconto }}",
+            "Juros": "={{ $json.valor_juros }}",
+            "Multa": "={{ $json.valor_multa }}",
+            "Descrição": "={{ $json.descricao }}",
+            "Observações": "={{ $json.observacoes }}",
+            "Forma Pagamento": "={{ $json.forma_pagamento }}",
+            "Conciliado": "={{ $json.conciliado }}",
+            "Aprovado Por": "={{ $json.aprovado_por }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        500
+      ],
+      "id": "airtable-create",
+      "name": "➕ Criar no Airtable",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "{{AIRTABLE_CREDENTIAL_ID}}",
+          "name": "Airtable Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE luna_financeiro.documentos \nSET airtable_record_id = '{{ $json.id }}',\n    ultima_sincronizacao = NOW()\nWHERE id = '{{ $('📥 Buscar Registro PostgreSQL').item.json.id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        500
+      ],
+      "id": "pg-save-airtable-id",
+      "name": "💾 Salvar ID Airtable no PG",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE luna_financeiro.documentos \nSET ultima_sincronizacao = NOW()\nWHERE id = '{{ $('📥 Buscar Registro PostgreSQL').item.json.id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        300
+      ],
+      "id": "pg-update-sync-time",
+      "name": "⏰ Atualizar Timestamp Sync",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Sincronizado com sucesso\", \"postgres_id\": $('📥 Buscar Registro PostgreSQL').item.json.id, \"airtable_id\": $json.id, \"timestamp\": $now } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        400
+      ],
+      "id": "respond-success",
+      "name": "✅ Responder Sucesso"
+    },
+    {
+      "parameters": {
+        "path": "airtable-to-postgres",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        800
+      ],
+      "id": "webhook-airtable",
+      "name": "🔔 Webhook Airtable",
+      "webhookId": "airtable-sync"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": "{{AIRTABLE_BASE_ID}}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Documentos"
+        },
+        "filterByFormula": "=RECORD_ID() = '{{ $json.body.record_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        800
+      ],
+      "id": "airtable-get-record",
+      "name": "📥 Buscar Registro Airtable",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "{{AIRTABLE_CREDENTIAL_ID}}",
+          "name": "Airtable Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar e preparar dados do Airtable para PostgreSQL\nconst airtableData = $input.item.json.fields;\nconst postgresId = airtableData['ID PostgreSQL'];\n\n// Validações\nif (!postgresId) {\n  throw new Error('Registro sem ID PostgreSQL - não pode sincronizar');\n}\n\n// Mapear campos Airtable → PostgreSQL\nconst postgresData = {\n  id: postgresId,\n  tipo: airtableData['Tipo']?.toLowerCase().replace(' ', '_'),\n  status: airtableData['Status']?.toLowerCase(),\n  numero_documento: airtableData['Nº Documento'],\n  numero_nf: airtableData['Nº NF'],\n  data_emissao: airtableData['Data Emissão'],\n  data_vencimento: airtableData['Data Vencimento'],\n  data_pagamento: airtableData['Data Pagamento'],\n  valor_bruto: parseFloat(airtableData['Valor Bruto']) || 0,\n  valor_desconto: parseFloat(airtableData['Desconto']) || 0,\n  valor_juros: parseFloat(airtableData['Juros']) || 0,\n  valor_multa: parseFloat(airtableData['Multa']) || 0,\n  descricao: airtableData['Descrição'],\n  observacoes: airtableData['Observações'],\n  forma_pagamento: airtableData['Forma Pagamento']?.toLowerCase(),\n  conciliado: airtableData['Conciliado'] || false,\n  aprovado_por: airtableData['Aprovado Por'],\n  updated_by: 'airtable_sync'\n};\n\n// Remover campos undefined ou null\nObject.keys(postgresData).forEach(key => {\n  if (postgresData[key] === undefined || postgresData[key] === null) {\n    delete postgresData[key];\n  }\n});\n\nreturn { json: postgresData };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        800
+      ],
+      "id": "validate-transform",
+      "name": "🔄 Validar e Transformar"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "value": "luna_financeiro",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "documentos",
+          "mode": "list"
+        },
+        "updateKey": "id",
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        600,
+        800
+      ],
+      "id": "pg-update-from-airtable",
+      "name": "📝 Atualizar PostgreSQL",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO luna_financeiro.transacoes \n  (documento_id, tipo_operacao, tabela, dados_novos, usuario, observacao)\nVALUES \n  ('{{ $json.id }}', 'SYNC_FROM_AIRTABLE', 'documentos', '{{ JSON.stringify($json) }}'::jsonb, 'airtable_sync', 'Sincronização automática do Airtable')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        800
+      ],
+      "id": "pg-log-sync",
+      "name": "📋 Log de Auditoria",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"PostgreSQL atualizado do Airtable\", \"record_id\": $json.id, \"timestamp\": $now } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        800
+      ],
+      "id": "respond-airtable-success",
+      "name": "✅ Responder Sucesso"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        1200
+      ],
+      "id": "schedule-full-sync",
+      "name": "⏰ Schedule Diário (3h)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, airtable_record_id, tipo, status, numero_documento, \n       data_vencimento, valor_liquido, updated_at\nFROM luna_financeiro.documentos\nWHERE updated_at > (NOW() - INTERVAL '25 hours')\nORDER BY updated_at DESC",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        200,
+        1200
+      ],
+      "id": "pg-get-recent",
+      "name": "📦 Buscar Alterações Recentes PG",
+      "credentials": {
+        "postgres": {
+          "id": "{{POSTGRES_CREDENTIAL_ID}}",
+          "name": "PostgreSQL Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": "{{AIRTABLE_BASE_ID}}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Documentos"
+        },
+        "options": {
+          "sort": [
+            {
+              "field": "Atualizado em",
+              "direction": "desc"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        1400
+      ],
+      "id": "airtable-get-all",
+      "name": "📦 Buscar Todos do Airtable",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "{{AIRTABLE_CREDENTIAL_ID}}",
+          "name": "Airtable Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Comparar e identificar divergências\nconst pgRecords = $('📦 Buscar Alterações Recentes PG').all().map(item => item.json);\nconst atRecords = $('📦 Buscar Todos do Airtable').all().map(item => ({\n  airtable_id: item.json.id,\n  postgres_id: item.json.fields['ID PostgreSQL'],\n  ...item.json.fields\n}));\n\nconst divergencias = [];\nconst stats = {\n  total_pg: pgRecords.length,\n  total_at: atRecords.length,\n  divergencias: 0,\n  faltando_airtable: 0,\n  faltando_postgres: 0\n};\n\n// Verificar registros do PG que não estão no Airtable\npgRecords.forEach(pgRec => {\n  const atRec = atRecords.find(at => at.postgres_id === pgRec.id);\n  \n  if (!atRec) {\n    divergencias.push({\n      tipo: 'faltando_airtable',\n      postgres_id: pgRec.id,\n      acao: 'criar_no_airtable'\n    });\n    stats.faltando_airtable++;\n  } else {\n    // Comparar valores críticos\n    if (\n      pgRec.status !== atRec.Status?.toLowerCase() ||\n      parseFloat(pgRec.valor_liquido) !== parseFloat(atRec['Valor Líquido'])\n    ) {\n      divergencias.push({\n        tipo: 'divergencia_valores',\n        postgres_id: pgRec.id,\n        airtable_id: atRec.airtable_id,\n        acao: 'atualizar_airtable'\n      });\n      stats.divergencias++;\n    }\n  }\n});\n\n// Registros no Airtable sem ID do PostgreSQL\natRecords.forEach(atRec => {\n  if (!atRec.postgres_id) {\n    divergencias.push({\n      tipo: 'sem_postgres_id',\n      airtable_id: atRec.airtable_id,\n      acao: 'investigar'\n    });\n  }\n});\n\nreturn [{ json: { stats, divergencias } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1300
+      ],
+      "id": "compare-systems",
+      "name": "🔍 Comparar Sistemas"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "has-divergencias",
+              "leftValue": "={{ $json.divergencias.length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        600,
+        1300
+      ],
+      "id": "check-divergencias",
+      "name": "❓ Tem Divergências?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "luna@mottivme.com.br",
+        "toEmail": "financeiro@mottivme.com.br",
+        "subject": "🚨 Relatório de Sincronização - Divergências Encontradas",
+        "emailFormat": "html",
+        "message": "=<h2>Relatório de Sincronização Diária</h2>\n\n<h3>📊 Estatísticas:</h3>\n<ul>\n  <li><strong>Total PostgreSQL:</strong> {{ $json.stats.total_pg }}</li>\n  <li><strong>Total Airtable:</strong> {{ $json.stats.total_at }}</li>\n  <li><strong>Divergências:</strong> {{ $json.stats.divergencias }}</li>\n  <li><strong>Faltando no Airtable:</strong> {{ $json.stats.faltando_airtable }}</li>\n</ul>\n\n<h3>⚠️ Ações Necessárias:</h3>\n<p>{{ $json.divergencias.length }} divergências detectadas.</p>\n\n<p><strong>Ação:</strong> Verifique o log completo no N8N.</p>\n\n<p><em>Sincronização executada em: {{ $now }}</em></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        1200
+      ],
+      "id": "send-alert-email",
+      "name": "📧 Enviar Alerta Email",
+      "credentials": {
+        "smtp": {
+          "id": "{{SMTP_CREDENTIAL_ID}}",
+          "name": "SMTP Luna"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $json.error }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        600
+      ],
+      "id": "respond-error",
+      "name": "❌ Responder Erro",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "🔔 Webhook PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "📥 Buscar Registro PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Buscar Registro PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "🔍 Existe no Airtable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Existe no Airtable?": {
+      "main": [
+        [
+          {
+            "node": "✏️ Atualizar Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "➕ Criar no Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✏️ Atualizar Airtable": {
+      "main": [
+        [
+          {
+            "node": "⏰ Atualizar Timestamp Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "➕ Criar no Airtable": {
+      "main": [
+        [
+          {
+            "node": "💾 Salvar ID Airtable no PG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Salvar ID Airtable no PG": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Atualizar Timestamp Sync": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔔 Webhook Airtable": {
+      "main": [
+        [
+          {
+            "node": "📥 Buscar Registro Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Buscar Registro Airtable": {
+      "main": [
+        [
+          {
+            "node": "🔄 Validar e Transformar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Validar e Transformar": {
+      "main": [
+        [
+          {
+            "node": "📝 Atualizar PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Atualizar PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "📋 Log de Auditoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Log de Auditoria": {
+      "main": [
+        [
+          {
+            "node": "✅ Responder Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ Schedule Diário (3h)": {
+      "main": [
+        [
+          {
+            "node": "📦 Buscar Alterações Recentes PG",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📦 Buscar Todos do Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Buscar Alterações Recentes PG": {
+      "main": [
+        [
+          {
+            "node": "🔍 Comparar Sistemas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Buscar Todos do Airtable": {
+      "main": [
+        [
+          {
+            "node": "🔍 Comparar Sistemas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Comparar Sistemas": {
+      "main": [
+        [
+          {
+            "node": "❓ Tem Divergências?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Tem Divergências?": {
+      "main": [
+        [
+          {
+            "node": "📧 Enviar Alerta Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-11-16T00:00:00.000Z",
+      "updatedAt": "2025-11-16T00:00:00.000Z",
+      "id": "luna-sync",
+      "name": "luna-sync"
+    }
+  ],
+  "triggerCount": 3,
+  "updatedAt": "2025-11-16T00:00:00.000Z",
+  "versionId": "1"
+}
